@@ -1,6 +1,5 @@
 .DS_Store
 node_modules
-/dist
 
 # Log files
 npm-debug.log*
@@ -25,11 +24,10 @@ __pycache__/
 # C extensions
 *.so
 
-# Distribution / packaging
+# Distribution / packaging (except dist)
 .Python
 build/
 develop-eggs/
-dist/
 downloads/
 eggs/
 .eggs/

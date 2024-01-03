@@ -1,30 +1,21 @@
 <template>
-  <v-container>
-    <v-btn @click="fetchMessage">Fetch Message</v-btn>
-    <p>{{ message }}</p>
-  </v-container>
+  <v-app>
+    <NavBar :username="username" />
+    <v-main> <!-- Ensures content is below the app bar -->
+      <router-view @update:user="username = $event" />
+    </v-main>
+  </v-app>
 </template>
 
 <script>
+import NavBar from './components/NavBar.vue';
+
 export default {
+  components: { NavBar },
   data() {
     return {
-      message: ''
+      username: null
     };
-  },
-  methods: {
-    async fetchMessage() {
-      try {
-        const response = await fetch('/api/hello');
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        const data = await response.json();
-        this.message = data.message;
-      } catch (error) {
-        console.error("There was a problem with the fetch operation:", error);
-      }
-    }
   }
 };
 </script>

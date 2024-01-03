@@ -81,17 +81,17 @@ populate_categories_table(engine, categories_table, CATEGORY_LIST)
 def serve_vue_app():
     return send_from_directory(app.static_folder, 'index.html')
 
-# ------------------ API Routes to serve JSON data ------------------------------
+# ---------------------------------- GET APIs ----------------------------------
 
 @app.route('/api/hello')
 def hello_world():
     return jsonify(message='Hello from Flask!')
 
-@app.route("/api/logout")
-def logout():
-    logout_user()
-    return redirect(url_for("login"))
 
+# ---------------------------------- POST APIs ----------------------------------
+
+
+# --------------------------------- Security APIs ------------------------------
 
 @app.route("/api/login", methods=["POST"])
 def login():
@@ -109,17 +109,36 @@ def login():
         print(user)
         if user and user.check_password(password):
             login_and_update_last_login(user, engine)
-            return jsonify({"success": True, "username": user.account_name})
+            return jsonify(
+            {
+                'authenticated': True,
+                'username': current_user.account_name,
+                'display_name': current_user.display_name
+            })
         else:
-            return jsonify({"success": False, "error": "Invalid username/email or password"}), 401
+            return jsonify({"authenticated": False, "error": "Invalid username/email or password"}), 401
     except BadRequestKeyError:
-        return jsonify({"success": False, "error": "Invalid request"}), 400
+        return jsonify({"authenticated": False, "error": "Invalid request"}), 400
 
 
-# @app.route("/api/user_info")
-# @login_required
-# def user_info():
-#     return jsonify(username=current_user.username)
+@app.route("/api/logout")
+def logout():
+    logout_user()
+    return jsonify({'success': True})
+
+
+@app.route('/api/auth/status')
+def auth_status():
+
+    if current_user.is_authenticated:
+        return jsonify(
+            {
+                'authenticated': True,
+                'username': current_user.account_name,
+                'display_name': current_user.display_name
+            })
+    else:
+        return jsonify({'authenticated': False})
 
 
 # -------------------------------- Main Execution ------------------------------

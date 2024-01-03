@@ -13,7 +13,11 @@ const routes = [
     name: 'Login',
     component: Login,
   },
-  // Add more routes as needed
+  {
+    path: '/profile',
+    name: 'Profile',
+    component: Hero,
+  },
 ];
 
 const router = createRouter({

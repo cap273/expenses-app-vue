@@ -1,6 +1,9 @@
 import { createRouter, createWebHistory } from 'vue-router';
 import Login from './components/Login.vue';
 import Hero from './components/Hero.vue';
+import Signup from './components/Signup.vue';
+import InputExpenses from './components/InputExpenses.vue';
+import ViewExpenses from './components/ViewExpenses.vue';
 
 const routes = [
   {
@@ -16,7 +19,22 @@ const routes = [
   {
     path: '/profile',
     name: 'Profile',
-    component: Hero,
+    component: Hero, //placeholder
+  },
+  {
+    path: '/signup',
+    name: 'Signup',
+    component: Signup,
+  },
+  {
+    path: '/view_expenses',
+    name: 'ViewExpenses',
+    component: ViewExpenses,
+  },
+  {
+    path: '/input_expenses',
+    name: 'InputExpenses',
+    component: InputExpenses,
   },
 ];
 

@@ -1,4 +1,6 @@
-from flask_login import login_user
+from functools import wraps
+from flask import jsonify
+from flask_login import login_user, current_user
 from sqlalchemy import update, exc
 from datetime import datetime
 
@@ -19,3 +21,13 @@ def login_and_update_last_login(user, engine):
     except exc.SQLAlchemyError as e:
         print("Error occurred during login or update:", e)
         return False
+
+
+def login_required_api(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not current_user.is_authenticated:
+            # Return a 401 Unauthorized response
+            return jsonify({'error': 'Unauthorized'}), 401
+        return f(*args, **kwargs)
+    return decorated_function

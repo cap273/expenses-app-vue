@@ -13,7 +13,7 @@ def get_database_url(db_username, db_password, db_server, db_name):
     else:
         raise Exception("Suitable ODBC driver not found")
 
-    # Database URL using environment variables.
+    # Database URL
     return f"mssql+pyodbc://{db_username}:{db_password}@{db_server}/{db_name}?driver={driver}"
 
 

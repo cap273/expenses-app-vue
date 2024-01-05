@@ -36,3 +36,13 @@ class Person(db.Model):
     PersonName = db.Column(db.String(255), nullable=False)
     CreateDate = db.Column(db.Date)
     LastUpdated = db.Column(db.Date)
+
+    def to_json(self):
+        """
+        This method returns the PersonID and PersonName as a dictionary,
+        which can be easily converted to a JSON object.
+        """
+        return {
+            'PersonID': self.PersonID,
+            'PersonName': self.PersonName
+        }

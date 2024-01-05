@@ -93,3 +93,19 @@ categories_table = Table(
     Column("LastUpdated", Date),
     extend_existing=False,
 )
+
+# Define the persons table
+persons_table = Table(
+    "persons",
+    metadata,
+    Column("PersonID", Integer, primary_key=True),
+    Column("AccountID", Integer, ForeignKey('accounts.AccountID'), nullable=False),
+    Column("PersonName", String(255), nullable=False),
+    Column("CreateDate", Date),
+    Column("LastUpdated", Date),
+    extend_existing=False,
+    # Set implicit_returning to False so that
+    # SQLAlchemy won't try to use the OUTPUT clause to fetch the inserted ID.
+    # This should avoid conflicts with database triggers for ID generation
+    implicit_returning=False,
+)

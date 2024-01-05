@@ -17,6 +17,9 @@
     "sqlDatabaseName": {
       "value": "expensesdbdev"
     },
+    "repoUrl": {
+      "value": "https://github.com/cap273/expenses-app-vue"
+    },
     "sqlAdministratorLogin": {
       "value": "charliebrown"
     },

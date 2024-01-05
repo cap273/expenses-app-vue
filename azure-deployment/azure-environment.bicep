@@ -5,6 +5,7 @@ param flaskEnvironment string
 param sqlServerName string
 param sqlDatabaseName string
 param sqlAdministratorLogin string
+param repoUrl string
 param allowedIpAddress string
 @secure()
 param sqlAdministratorPassword string
@@ -254,7 +255,7 @@ resource appServiceSourceControl 'Microsoft.Web/sites/sourcecontrols@2022-09-01'
   parent: appService
   name: 'web'
   properties: {
-    repoUrl: 'https://github.com/cap273/expenses-app'
+    repoUrl: repoUrl
     branch: 'main'
     isManualIntegration: false
     isMercurial: false

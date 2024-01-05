@@ -8,7 +8,6 @@ import logging
 from datetime import datetime
 from flask_login import (
     LoginManager,
-    login_required,
     logout_user,
     current_user,
 )

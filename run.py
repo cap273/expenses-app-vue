@@ -3,7 +3,6 @@ from sqlalchemy import create_engine, select, case
 from sqlalchemy.sql import null
 from sqlalchemy.exc import SQLAlchemyError
 import os
-import json
 from dotenv import load_dotenv
 import logging
 from datetime import datetime
@@ -13,10 +12,13 @@ from flask_login import (
     logout_user,
     current_user,
 )
-from urllib.parse import urlparse
 from werkzeug.exceptions import BadRequestKeyError
 
-from flask_backend.utils.db_tools import populate_categories_table, get_categories, get_database_url
+from flask_backend.utils.db_tools import (
+    populate_categories_table,
+    get_categories,
+    get_database_url,
+)
 from flask_backend.utils.session import login_and_update_last_login, login_required_api
 from flask_backend.database.models import db, Account, Person
 from flask_backend.database.tables import (
@@ -45,7 +47,7 @@ else:
 
 DATABASE_URL = get_database_url(DB_USERNAME, DB_PASSWORD, DB_SERVER, DB_NAME)
 
-app = Flask(__name__, static_folder='./vue-frontend/dist', static_url_path='/')
+app = Flask(__name__, static_folder="./vue-frontend/dist", static_url_path="/")
 
 app.secret_key = os.environ.get(
     "FLASK_SECRET_KEY"
@@ -79,37 +81,46 @@ def load_user(user_id):
 populate_categories_table(engine, categories_table, CATEGORY_LIST)
 
 
-@app.route('/')
+@app.route("/")
 def serve_vue_app():
-    return send_from_directory(app.static_folder, 'index.html')
+    return send_from_directory(app.static_folder, "index.html")
+
 
 # ---------------------------------- Main GET APIs ----------------------------------
 
-@app.route('/api/hello', methods=["GET"])
-def hello_world():
-    return jsonify(message='Hello from Flask!')
 
-@app.route('/api/get_expenses', methods=["GET"])
+@app.route("/api/hello", methods=["GET"])
+def hello_world():
+    return jsonify(message="Hello from Flask!")
+
+
+@app.route("/api/get_expenses", methods=["GET"])
 @login_required_api
 def get_expenses():
-
     # Create a conditional expression for PersonName
     person_name_expr = case(
-        (expenses_table.c.PersonID == null(), "Joint"),
-        else_=persons_table.c.PersonName
+        (expenses_table.c.PersonID == null(), "Joint"), else_=persons_table.c.PersonName
     ).label("PersonName")
 
     # Create a SQL query to select expenses and join with the persons table
-    query = select(
-        expenses_table.c.ExpenseDate,
-        expenses_table.c.Amount,
-        expenses_table.c.ExpenseCategory,
-        expenses_table.c.AdditionalNotes,
-        expenses_table.c.Currency,
-        person_name_expr
-    ).select_from(
-        expenses_table.join(persons_table, expenses_table.c.PersonID == persons_table.c.PersonID, isouter=True)
-    ).where(expenses_table.c.AccountID == current_user.id)
+    query = (
+        select(
+            expenses_table.c.ExpenseDate,
+            expenses_table.c.Amount,
+            expenses_table.c.ExpenseCategory,
+            expenses_table.c.AdditionalNotes,
+            expenses_table.c.Currency,
+            person_name_expr,
+        )
+        .select_from(
+            expenses_table.join(
+                persons_table,
+                expenses_table.c.PersonID == persons_table.c.PersonID,
+                isouter=True,
+            )
+        )
+        .where(expenses_table.c.AccountID == current_user.id)
+    )
 
     # Execute the query using SQLAlchemy Core
     with engine.connect() as connection:
@@ -131,7 +142,8 @@ def get_expenses():
 
 # ------------------------------- Auxilliary GET APIs -------------------------------
 
-@app.route('/api/get_categories', methods=["GET"])
+
+@app.route("/api/get_categories", methods=["GET"])
 @login_required_api
 def get_categories_api():
     # Fetch and return all the (default) expense categories
@@ -139,7 +151,7 @@ def get_categories_api():
     return jsonify({"categories": categories})
 
 
-@app.route('/api/get_persons', methods=["GET"])
+@app.route("/api/get_persons", methods=["GET"])
 @login_required_api
 def get_persons_api():
     # Fetch and return persons associated with the current user's account
@@ -150,14 +162,14 @@ def get_persons_api():
 
 # ---------------------------------- POST APIs ----------------------------------
 
-@app.route('/api/submit_expenses', methods=['POST'])
+
+@app.route("/api/submit_expenses", methods=["POST"])
 @login_required_api
 def submit_new_expenses():
-
     try:
         # Parse JSON data from request
         data = request.json
-        expenses = data['expenses']
+        expenses = data["expenses"]
         counter = 0
 
         try:
@@ -165,13 +177,13 @@ def submit_new_expenses():
                 for expense in expenses:
                     try:
                         # Extract individual fields from the expense dictionary
-                        scope = expense['scope']
-                        day = expense['day']
-                        month = expense['month']
-                        year = expense['year']
-                        amount = expense['amount']
-                        category = expense['category']
-                        notes = expense['notes']
+                        scope = expense["scope"]
+                        day = expense["day"]
+                        month = expense["month"]
+                        year = expense["year"]
+                        amount = expense["amount"]
+                        category = expense["category"]
+                        notes = expense["notes"]
 
                         expense_date = datetime.strptime(
                             f"{year}-{month}-{day}", "%Y-%B-%d"
@@ -202,17 +214,22 @@ def submit_new_expenses():
                         )
 
                         counter += 1
-                    
+
                     except ValueError as e:
                         # Handle invalid date
                         print("Invalid date:", day, month, year)
                         continue  # TODO: Handle this invalid date. For now, skip it.
-                
+
                 # Commit all the changes to the database
                 conn.commit()
 
-                return jsonify({"success": True, "message": f"{counter} expenses successfully recorded."})
-            
+                return jsonify(
+                    {
+                        "success": True,
+                        "message": f"{counter} expenses successfully recorded.",
+                    }
+                )
+
         except SQLAlchemyError as e:
             if FLASK_ENV == "development":
                 print(e)
@@ -221,7 +238,9 @@ def submit_new_expenses():
     except BadRequestKeyError:
         return jsonify({"success": False, "error": "Invalid request"})
 
+
 # --------------------------------- Security APIs ------------------------------
+
 
 @app.route("/api/login", methods=["POST"])
 def login():
@@ -232,23 +251,32 @@ def login():
         password = data.get("password")
 
         user = Account.query.filter(
-            (Account.account_name == username_or_email) | 
-            (Account.user_email == username_or_email)
+            (Account.account_name == username_or_email)
+            | (Account.user_email == username_or_email)
         ).first()
 
         if user and user.check_password(password):
             login_and_update_last_login(user, engine)
             return jsonify(
-            {
-                'authenticated': True,
-                'username': current_user.account_name,
-                'display_name': current_user.display_name
-            })
+                {
+                    "authenticated": True,
+                    "username": current_user.account_name,
+                    "display_name": current_user.display_name,
+                }
+            )
         else:
-            return jsonify({"authenticated": False, "error": "Invalid username/email or password"}), 401
+            return (
+                jsonify(
+                    {
+                        "authenticated": False,
+                        "error": "Invalid username/email or password",
+                    }
+                ),
+                401,
+            )
     except BadRequestKeyError:
         return jsonify({"authenticated": False, "error": "Invalid request"}), 400
-    
+
 
 @app.route("/api/create_account", methods=["POST"])
 def create_account():
@@ -269,13 +297,15 @@ def create_account():
             # Check if email already exists
             existing_user_by_email = Account.query.filter_by(user_email=email).first()
             if existing_user_by_email:
-                return jsonify({"success": False, "error": "Email address already exists."}) 
+                return jsonify(
+                    {"success": False, "error": "Email address already exists."}
+                )
             else:
                 # Create new user instance
                 new_user = Account(
                     account_name=username,
                     user_email=email,
-                    display_name=username, # Default to display name = username
+                    display_name=username,  # Default to display name = username
                     currency="USD",  # Default to USD
                 )
 
@@ -297,12 +327,13 @@ def create_account():
                 login_and_update_last_login(new_user, engine)
 
                 return jsonify(
-                {
-                    'success': True,
-                    'authenticated': True,
-                    'username': current_user.account_name,
-                    'display_name': current_user.display_name
-                })
+                    {
+                        "success": True,
+                        "authenticated": True,
+                        "username": current_user.account_name,
+                        "display_name": current_user.display_name,
+                    }
+                )
 
     except BadRequestKeyError:
         return jsonify({"success": False, "error": "Invalid request"})
@@ -311,21 +342,21 @@ def create_account():
 @app.route("/api/logout")
 def logout():
     logout_user()
-    return jsonify({'success': True})
+    return jsonify({"success": True})
 
 
-@app.route('/api/auth/status')
+@app.route("/api/auth/status")
 def auth_status():
-
     if current_user.is_authenticated:
         return jsonify(
             {
-                'authenticated': True,
-                'username': current_user.account_name,
-                'display_name': current_user.display_name
-            })
+                "authenticated": True,
+                "username": current_user.account_name,
+                "display_name": current_user.display_name,
+            }
+        )
     else:
-        return jsonify({'authenticated': False})
+        return jsonify({"authenticated": False})
 
 
 # -------------------------------- Main Execution ------------------------------

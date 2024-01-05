@@ -56,9 +56,7 @@ expenses_table = Table(
     metadata,
     Column("ExpenseID", Integer, primary_key=True),
     Column("AccountID", Integer, ForeignKey("accounts.AccountID"), nullable=False),
-    Column(
-        "ExpenseScope", String(255)
-    ),  # Either 'Joint' or the name of an individual
+    Column("ExpenseScope", String(255)),  # Either 'Joint' or the name of an individual
     Column(
         "PersonID", Integer, ForeignKey("persons.PersonID"), nullable=True
     ),  # NULL if it's a joint expense
@@ -99,7 +97,7 @@ persons_table = Table(
     "persons",
     metadata,
     Column("PersonID", Integer, primary_key=True),
-    Column("AccountID", Integer, ForeignKey('accounts.AccountID'), nullable=False),
+    Column("AccountID", Integer, ForeignKey("accounts.AccountID"), nullable=False),
     Column("PersonName", String(255), nullable=False),
     Column("CreateDate", Date),
     Column("LastUpdated", Date),

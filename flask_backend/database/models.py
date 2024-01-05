@@ -8,7 +8,9 @@ db = SQLAlchemy()  # Initialize Flask-SQLAlchemy
 
 class Account(UserMixin, db.Model):
     __tablename__ = "accounts"
-    __table_args__ = {'implicit_returning': False}  # Avoid conflicts with database triggers for ID generation
+    __table_args__ = {
+        "implicit_returning": False
+    }  # Avoid conflicts with database triggers for ID generation
 
     id = db.Column("AccountID", db.Integer, primary_key=True)
     account_name = db.Column("AccountName", db.String(255), unique=True, nullable=False)
@@ -28,11 +30,13 @@ class Account(UserMixin, db.Model):
 
 
 class Person(db.Model):
-    __tablename__ = 'persons'
-    __table_args__ = {'implicit_returning': False}
+    __tablename__ = "persons"
+    __table_args__ = {"implicit_returning": False}
 
     PersonID = db.Column(db.Integer, primary_key=True)
-    AccountID = db.Column(db.Integer, db.ForeignKey('accounts.AccountID'), nullable=False)
+    AccountID = db.Column(
+        db.Integer, db.ForeignKey("accounts.AccountID"), nullable=False
+    )
     PersonName = db.Column(db.String(255), nullable=False)
     CreateDate = db.Column(db.Date)
     LastUpdated = db.Column(db.Date)
@@ -42,7 +46,4 @@ class Person(db.Model):
         This method returns the PersonID and PersonName as a dictionary,
         which can be easily converted to a JSON object.
         """
-        return {
-            'PersonID': self.PersonID,
-            'PersonName': self.PersonName
-        }
+        return {"PersonID": self.PersonID, "PersonName": self.PersonName}

@@ -14,7 +14,11 @@ def login_and_update_last_login(user, engine):
 
         # Update the last login date using SQLAlchemy Core
         with engine.begin() as connection:  # Automatically begins a transaction
-            stmt = update(Account).where(Account.id == user.id).values(last_login_date=datetime.utcnow())
+            stmt = (
+                update(Account)
+                .where(Account.id == user.id)
+                .values(last_login_date=datetime.utcnow())
+            )
             connection.execute(stmt)
 
         return True
@@ -28,6 +32,7 @@ def login_required_api(f):
     def decorated_function(*args, **kwargs):
         if not current_user.is_authenticated:
             # Return a 401 Unauthorized response
-            return jsonify({'error': 'Unauthorized'}), 401
+            return jsonify({"error": "Unauthorized"}), 401
         return f(*args, **kwargs)
+
     return decorated_function

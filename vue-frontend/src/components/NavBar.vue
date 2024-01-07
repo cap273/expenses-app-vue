@@ -36,9 +36,18 @@
         </template>
         <template v-else>
           <v-btn text class="d-flex align-center">
-            <v-icon left>mdi-account</v-icon>
-            {{ globalState.username }}
-            <v-menu activator="parent" offset-y>
+
+            <!-- Loading Icon when Logging out -->
+            <v-progress-circular v-if="isLoggingOut" indeterminate size="24"></v-progress-circular>
+
+            <!-- Account Icon and Username -->
+            <template v-else>
+              <v-icon left>mdi-account</v-icon>
+              {{ globalState.username }}
+            </template>
+
+            <!-- User Menu -->
+            <v-menu v-if="!isLoggingOut" activator="parent" offset-y>
               <v-list>
                 <v-list-item link :to="{ name: 'Profile' }">
                   <v-list-item-title>Profile</v-list-item-title>
@@ -48,6 +57,7 @@
                 </v-list-item>
               </v-list>
             </v-menu>
+
           </v-btn>
         </template>
       </v-col>
@@ -57,12 +67,16 @@
 
 
 <script>
+import { ref } from 'vue';
 import { globalState } from '@/main.js';
 import placeholderLogo from '@/assets/placeholder-logo.png';
 import { useRouteClass } from '@/composables/useRouteClass';
 
 export default {
   setup() {
+
+    const isLoggingOut = ref(false);  // Indicates whether user is logging out
+
     // Method to toggle drawer state
     const toggleDrawer = () => {
       globalState.isDrawerOpen = !globalState.isDrawerOpen;
@@ -73,21 +87,25 @@ export default {
 
     // Method to handle logout
     const logout = async () => {
+      isLoggingOut.value = true;
       await fetch('/api/logout');
       // Clear global state
       globalState.authenticated = false;
       globalState.username = null;
       globalState.display_name = null;
-      // Redirect to the main page
-      this.$router.push('/');
+      isLoggingOut.value = false;
+
+      // Redirect to the main page with a full page reload
+      window.location.href = '/';
     };
 
     return {
       toggleDrawer,
       getButtonClass,
       logout,
+      isLoggingOut,
       placeholderLogo,
-      globalState,
+      globalState
     };
   },
 };

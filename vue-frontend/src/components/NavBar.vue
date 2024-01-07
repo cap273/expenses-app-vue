@@ -9,15 +9,23 @@
       </v-col>
 
       <!-- Middle Column -->
-      <v-col cols="6" sm="4" class="d-flex align-center">
-        <template v-if="!globalState.authenticated">
-          <v-btn text href="#features" class="hidden-xs-only first-nav-button">Features</v-btn>
-          <v-btn text href="#pricing" class="hidden-xs-only">Pricing</v-btn>
-        </template>
-        <template v-else>
-          <v-btn text :class="[getButtonClass('InputExpenses'), 'first-nav-button']" to="/input_expenses">Input Expenses</v-btn>
-          <v-btn text :class="getButtonClass('ViewExpenses')" to="/view_expenses">View Expenses</v-btn>
-        </template>
+      <v-col cols="6" sm="4" class="d-flex justify-center align-center">
+        <!-- Hamburger Menu Icon (Visible only on small screens) -->
+        <v-btn icon class="d-sm-none" @click="toggleDrawer" style="align-self: center;">
+          <v-icon>mdi-menu</v-icon>
+        </v-btn>
+
+        <!-- Regular Buttons for Large Screens (Middle Column) -->
+        <div class="d-none d-sm-flex">
+          <template v-if="!globalState.authenticated">
+            <v-btn text href="#features" class="first-nav-button">Features</v-btn>
+            <v-btn text href="#pricing">Pricing</v-btn>
+          </template>
+          <template v-else>
+            <v-btn text :class="[getButtonClass('InputExpenses'), 'first-nav-button']" to="/input_expenses">Input Expenses</v-btn>
+            <v-btn text :class="getButtonClass('ViewExpenses')" to="/view_expenses">View Expenses</v-btn>
+          </template>
+        </div>
       </v-col>
 
       <!-- Right-most Column -->
@@ -51,39 +59,41 @@
 <script>
 import { globalState } from '@/main.js';
 import placeholderLogo from '@/assets/placeholder-logo.png';
-
+import { useRouteClass } from '@/composables/useRouteClass';
 
 export default {
-  data() {
+  setup() {
+    // Method to toggle drawer state
+    const toggleDrawer = () => {
+      globalState.isDrawerOpen = !globalState.isDrawerOpen;
+    };
+
+    // Method to vary the color of the buttons based on the current route
+    const { getButtonClass } = useRouteClass();
+
+    // Method to handle logout
+    const logout = async () => {
+      await fetch('/api/logout');
+      // Clear global state
+      globalState.authenticated = false;
+      globalState.username = null;
+      globalState.display_name = null;
+      // Redirect to the main page
+      this.$router.push('/');
+    };
+
     return {
+      toggleDrawer,
+      getButtonClass,
+      logout,
       placeholderLogo,
-      globalState
+      globalState,
     };
   },
-  methods: {
-    getButtonClass(routeName) {
-    return {
-      'nav-button': true,
-      'light-blue': this.$route.name !== routeName,
-      'dark-blue': this.$route.name === routeName
-    };
-  },
-    logout() {
-      fetch('/api/logout')
-        .then(() => {
-          // Clear global state
-          globalState.authenticated = false;
-          globalState.username = null;
-          globalState.display_name = null;
-          this.$router.push('/'); // Redirect to the main page
-        });
-    }
-  }
 };
 </script>
 
 <style>
-
 .first-nav-button {
   margin-left: 15px;
 }

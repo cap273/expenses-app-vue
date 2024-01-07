@@ -1,102 +1,108 @@
 <template>
     <v-container>
-      <h2 class="expenses-header text-center">Input New Expenses</h2>
-      <v-form id="expensesForm" @submit.prevent="submitExpenses">
-        <v-table dense class="elevation-1 tight-table">
-          <thead>
-            <tr>
-              <th class="column-scope">Expense Scope</th>
-              <th class="column-day">Day</th>
-              <th class="column-month">Month</th>
-              <th class="column-year">Year</th>
-              <th class="column-amount">Amount</th>
-              <th class="column-category">Expense Category</th>
-              <th class="column-notes">Additional Notes</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="(expense, index) in expenses" :key="index">
-                <!-- Expense Scope Dropdown -->
-                <td>
-                <v-select
-                    v-model="expense.scope"
-                    :items="scopes"
-                    class="input-field input-field--scope"
-                ></v-select>
-                </td>
-                <!-- Day Field -->
-                <td>
+        <h2 class="expenses-header text-center">Input New Expenses</h2>
+
+        <!-- Response Message -->
+        <div v-if="responseMessage.message" :class="{'text-success': responseMessage.type === 'success', 'text-error': responseMessage.type === 'error'}">
+            {{ responseMessage.message }}
+        </div>
+
+        <v-form ref="form" id="expensesForm" @submit.prevent="submitExpenses">
+            <v-table dense class="elevation-1 tight-table">
+                <thead>
+                <tr>
+                    <th class="column-scope">Expense Scope</th>
+                    <th class="column-day">Day</th>
+                    <th class="column-month">Month</th>
+                    <th class="column-year">Year</th>
+                    <th class="column-amount">Amount</th>
+                    <th class="column-category">Expense Category</th>
+                    <th class="column-notes">Additional Notes</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr v-for="(expense, index) in expenses" :key="index">
+                    <!-- Expense Scope Dropdown -->
+                    <td>
+                    <v-select
+                        v-model="expense.scope"
+                        :items="scopes"
+                        class="input-field input-field--scope"
+                    ></v-select>
+                    </td>
+                    <!-- Day Field -->
+                    <td>
+                        <v-text-field
+                        v-model="expense.day"
+                        type="number"
+                        :rules="[rules.day]"
+                        class="input-field input-field--day"
+                        hide-spin-buttons
+                        ></v-text-field>
+                    </td>
+                    <!-- Month Dropdown -->
+                    <td>
+                    <v-select
+                        v-model="expense.month"
+                        :items="months"
+                        class="input-field input-field--month"
+                    ></v-select>
+                    </td>
+                    <!-- Year Field -->
+                    <td>
+                        <v-text-field
+                        v-model="expense.year"
+                        type="number"
+                        :rules="[rules.year]"
+                        class="input-field input-field--year"
+                        hide-spin-buttons
+                        ></v-text-field>
+                    </td>
+                    <!-- Amount Field -->
+                    <!-- Changed to type=text to better handle decimal places.-->
+                    <td>
+                        <v-text-field
+                        v-model="expense.amount"
+                        type="text"
+                        :rules="[rules.amount]"
+                        class="input-field .input-field--amount"
+                        :prepend-inner-icon="'mdi-currency-usd'"
+                        ></v-text-field>
+                    </td>
+                    <!-- Expense Category Dropdown -->
+                    <td>
+                    <v-select
+                        v-model="expense.category"
+                        :items="categories"
+                        class="input-field .input-field--category"
+                    ></v-select>
+                    </td>
+                    <!-- Additional Notes Field -->
+                    <td>
                     <v-text-field
-                    v-model="expense.day"
-                    type="number"
-                    :rules="[rules.day]"
-                    class="input-field input-field--day"
-                    hide-spin-buttons
+                        v-model="expense.notes"
+                        class="input-field .input-field--additionalnotes"
                     ></v-text-field>
-                </td>
-                <!-- Month Dropdown -->
-                <td>
-                <v-select
-                    v-model="expense.month"
-                    :items="months"
-                    class="input-field input-field--month"
-                ></v-select>
-                </td>
-                <!-- Year Field -->
-                <td>
-                    <v-text-field
-                    v-model="expense.year"
-                    type="number"
-                    :rules="[rules.year]"
-                    class="input-field input-field--year"
-                    hide-spin-buttons
-                    ></v-text-field>
-                </td>
-                <!-- Amount Field -->
-                <!-- Changed to type=text to better handle decimal places.-->
-                <td>
-                    <v-text-field
-                    v-model="expense.amount"
-                    type="text"
-                    :rules="[rules.amount]"
-                    class="input-field .input-field--amount"
-                    :prepend-inner-icon="'mdi-currency-usd'"
-                    ></v-text-field>
-                </td>
-                <!-- Expense Category Dropdown -->
-                <td>
-                <v-select
-                    v-model="expense.category"
-                    :items="categories"
-                    class="input-field .input-field--category"
-                ></v-select>
-                </td>
-                <!-- Additional Notes Field -->
-                <td>
-                <v-text-field
-                    v-model="expense.notes"
-                    class="input-field .input-field--additionalnotes"
-                ></v-text-field>
-                </td>
-            </tr>
-        </tbody>
-      </v-table>
-      <v-row justify="center" class="button-row">
-            <v-col cols="auto">
-                <v-btn class="mx-2" type="button" @click="addRow">Add Row</v-btn>
-            </v-col>
-            <v-col cols="auto">
-                <v-btn class="mx-2" type="button" @click="deleteRow">Delete Last Row</v-btn>
-            </v-col>
-            <v-col cols="auto">
-                <v-btn class="mx-2" 
-                type="submit" 
-                color="primary"
-                :loading="loading"
-                >Submit</v-btn>
-            </v-col>
-        </v-row>
-      </v-form>
+                    </td>
+                </tr>
+            </tbody>
+            </v-table>
+            <v-row justify="center" class="button-row">
+                <v-col cols="auto">
+                    <v-btn class="mx-2" type="button" @click="addRow">Add Row</v-btn>
+                </v-col>
+                <v-col cols="auto">
+                    <v-btn class="mx-2" type="button" @click="deleteRow">Delete Last Row</v-btn>
+                </v-col>
+                <v-col cols="auto">
+                    <v-btn class="mx-2" 
+                    type="submit" 
+                    color="primary"
+                    :loading="loading"
+                    >Submit</v-btn>
+                </v-col>
+            </v-row>
+        </v-form>
     </v-container>
 </template>
 
@@ -115,6 +121,12 @@ export default {
         // Data structure to map names of people to that person's ID, according
         // to the backend server
         const nameToIdMap = ref({});
+
+        // Stores the response message and its type
+        const responseMessage = ref({ message: '', type: '' });
+
+        // Reference to the form element to reset form validation after submission
+        const form = ref(null);
 
         const fetchScopes = async () => {
             try {
@@ -225,13 +237,23 @@ export default {
                 }
                 
                 const responseData = await response.json();
-                console.log('Submission successful:', responseData);
-                // Handle success, maybe clear the form or display a success message
+                console.log('Server response:', responseData);
+                
+                if (responseData.success) {
+                    expenses.value = [{ scope: '', day: '', month: '', year: '', amount: '', category: '', notes: '' }]; // Clear the form
+                    responseMessage.value = { message: responseData.message, type: 'success' };
+
+                    if (form.value) {
+                        form.value.reset(); // Reset the form validation
+                    }
+                } else {
+                    responseMessage.value = { message: responseData.error, type: 'error' };
+                }
+
             } catch (error) {
                 console.error('Error submitting expenses:', error);
-                // Handle error, maybe display an error message to the user
-            }
-            finally {
+                responseMessage.value = { message: 'Failed to submit expenses. Please try again.', type: 'error' };
+            } finally {
                 loading.value = false; // Deactivate loading animation
             }
         };
@@ -241,7 +263,19 @@ export default {
             fetchCategories();
         });
 
-        return { expenses, scopes, months, categories, addRow, deleteRow, submitExpenses, rules, loading };
+        return { 
+            expenses,
+            scopes, 
+            months,
+            categories, 
+            rules, 
+            loading,
+            responseMessage,
+            form,
+            addRow, 
+            deleteRow, 
+            submitExpenses
+        };
     }
 };
 </script>
@@ -263,6 +297,14 @@ export default {
 .tight-table {
   table-layout: fixed;
   width: 100%;
+}
+
+.text-success {
+    color: darkgreen;
+  }
+
+.text-error {
+    color: red;
 }
 
 </style>

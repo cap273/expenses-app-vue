@@ -1,7 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router';
-import Login from './components/Login.vue';
+import LoginWithSignup from '@/views/LoginWithSignup.vue';
 import Hero from './components/Hero.vue';
-import Signup from './components/Signup.vue';
+import SignUpWithLogin from '@/views/SignUpWithLogin.vue';
 import InputExpenses from './components/InputExpenses.vue';
 import ViewExpenses from './components/ViewExpenses.vue';
 
@@ -14,7 +14,7 @@ const routes = [
   {
     path: '/login',
     name: 'Login',
-    component: Login,
+    component: LoginWithSignup,
   },
   {
     path: '/profile',
@@ -24,7 +24,7 @@ const routes = [
   {
     path: '/signup',
     name: 'Signup',
-    component: Signup,
+    component: SignUpWithLogin,
   },
   {
     path: '/view_expenses',

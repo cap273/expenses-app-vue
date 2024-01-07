@@ -10,11 +10,16 @@
                 v-model="loginData.usernameOrEmail"
                 label="Username or Email"
                 type="text"
+                placeholder="Enter your email or username"
               ></v-text-field>
               <v-text-field
                 v-model="loginData.password"
                 label="Password"
-                type="password"
+                :append-inner-icon="visible ? 'mdi-eye-off' : 'mdi-eye'"
+                :type="visible ? 'text' : 'password'"
+                placeholder="Enter your password"
+                prepend-inner-icon="mdi-lock-outline"
+                @click:append-inner="togglePasswordVisibility"
               ></v-text-field>
             </v-form>
             <div class="text-center red--text text-bold">{{ errorMessage }}</div>
@@ -46,7 +51,8 @@ export default {
         password: ''
       },
       errorMessage: '',
-      loading: false // Add a loading state
+      loading: false, // Add a loading state
+      visible: false // Controls the visibility of the password
     };
   },
   methods: {
@@ -78,7 +84,12 @@ export default {
         this.loading = false; // Deactivate loading animation on error
         this.errorMessage = error.message || 'An error occurred during login';
       });
-    }
+    },
+
+    // Add a method to toggle password visibility
+    togglePasswordVisibility() {
+      this.visible = !this.visible;
+    },
   }
 };
 </script>

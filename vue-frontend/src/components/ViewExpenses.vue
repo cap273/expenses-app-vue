@@ -6,7 +6,12 @@
         class="mb-3"
         ></v-text-field>
 
-        <v-data-table
+        <!-- Loading Screen -->
+        <div v-if="loading" class="text-center">
+          <v-progress-circular indeterminate></v-progress-circular>
+        </div>
+
+        <v-data-table v-else
         :headers="headers"
         :items="expenses"
         :search="search"
@@ -24,6 +29,7 @@ import { ref, onMounted } from 'vue';
 export default {
   setup() {
 
+    const loading = ref(true);  // Indicates whether data is being fetched
     const search = ref("");  // Reactive property for search query
     
     const expenses = ref([]);
@@ -41,8 +47,12 @@ export default {
     ]);
 
     const fetchExpenses = async () => {
+
+      loading.value = true; // Start loading
+      
       try {
         const response = await fetch('/api/get_expenses');
+        
         if (!response.ok) {
           throw new Error('Failed to fetch expenses');
         }
@@ -50,8 +60,11 @@ export default {
         if (data.success) {
           expenses.value = data.expenses;
         }
+
+        loading.value = false; // Stop loading after data is fetched
       } catch (error) {
         console.error('Error:', error);
+        loading.value = false; // Stop loading if there is an error
       }
     };
 
@@ -59,7 +72,7 @@ export default {
       fetchExpenses();
     });
 
-    return { search, expenses, headers };
+    return { loading, search, expenses, headers };
   }
 };
 </script>

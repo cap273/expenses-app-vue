@@ -17,7 +17,8 @@ import { reactive } from 'vue';
 export const globalState = reactive({
   authenticated: false,
   username: null,
-  display_name: null
+  display_name: null,
+  isDrawerOpen: false // Reactive state for the navigation drawer
 });
 
 const app = createApp(App);

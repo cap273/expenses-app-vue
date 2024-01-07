@@ -3,6 +3,7 @@ from sqlalchemy import create_engine, select, case
 from sqlalchemy.sql import null
 from sqlalchemy.exc import SQLAlchemyError
 import os
+import re
 from dotenv import load_dotenv
 import logging
 from datetime import datetime
@@ -184,15 +185,24 @@ def submit_new_expenses():
                         category = expense["category"]
                         notes = expense["notes"]
 
-                        expense_date = datetime.strptime(
-                            f"{year}-{month}-{day}", "%Y-%B-%d"
-                        ).date()
+                        # Try to parse the date
+                        try:
+                            expense_date = datetime.strptime(
+                                f"{year}-{month}-{day}", "%Y-%B-%d"
+                            ).date()
+                        except ValueError:
+                            # Handle invalid date
+                            return jsonify({"success": False, "error": f"Invalid date: {day}-{month}-{year}"})
 
                         # Determine if the scope is joint or individual
                         person_id = None if scope == "Joint" else scope
                         expense_scope = "Joint" if scope == "Joint" else "Individual"
 
-                        # TODO: Validate that any person_id is associated with the current user's account
+                        # Validate that any person_id is associated with the current user's account
+                        if person_id is not None:
+                            person = Person.query.filter_by(PersonID=person_id, AccountID=current_user.id).first()
+                            if person is None:
+                                return jsonify({"success": False, "error": f"PersonID {person_id} is not associated with the current user's account."})
 
                         conn.execute(
                             expenses_table.insert().values(
@@ -214,10 +224,8 @@ def submit_new_expenses():
 
                         counter += 1
 
-                    except ValueError as e:
-                        # Handle invalid date
-                        print("Invalid date:", day, month, year)
-                        continue  # TODO: Handle this invalid date. For now, skip it.
+                    except Exception as e:
+                        return jsonify({"success": False, "error": str(e)})
 
                 # Commit all the changes to the database
                 conn.commit()
@@ -225,7 +233,7 @@ def submit_new_expenses():
                 return jsonify(
                     {
                         "success": True,
-                        "message": f"{counter} expenses successfully recorded.",
+                        "message": f"{counter} expense{'s' if counter != 1 else ''} successfully recorded.",
                     }
                 )
 
@@ -285,6 +293,18 @@ def create_account():
         username = data.get("username")
         email = data.get("email")
         password = data.get("password")
+
+        # Validate username length
+        if len(username) <= 3:
+            return jsonify({"success": False, "error": "Username must be longer than 3 characters."})
+
+        # Validate email format
+        if not re.match(r"[^@]+@[^@]+\.[^@]+", email):
+            return jsonify({"success": False, "error": "Invalid email address format."})
+
+        # Validate password length
+        if len(password) < 8:
+            return jsonify({"success": False, "error": "Password must be 8 characters or longer."})
 
         # Check if username already exists
         existing_user_by_username = Account.query.filter_by(

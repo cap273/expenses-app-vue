@@ -21,12 +21,13 @@
                 </tr>
                 </thead>
                 <tbody>
-                <tr v-for="(expense, index) in expenses" :key="index">
+                <tr v-for="(expense, index) in expenses" :key="`row-${index}-${expense.rowKey}`">
                     <!-- Expense Scope Dropdown -->
                     <td>
                     <v-select
                         v-model="expense.scope"
                         :items="scopes"
+                        :rules="[rules.scope]"
                         class="input-field input-field--scope"
                     ></v-select>
                     </td>
@@ -45,6 +46,7 @@
                     <v-select
                         v-model="expense.month"
                         :items="months"
+                        :rules="[rules.month]"
                         class="input-field input-field--month"
                     ></v-select>
                     </td>
@@ -74,6 +76,7 @@
                     <v-select
                         v-model="expense.category"
                         :items="categories"
+                        :rules="[rules.category]"
                         class="input-field .input-field--category"
                     ></v-select>
                     </td>
@@ -93,6 +96,9 @@
                 </v-col>
                 <v-col cols="auto">
                     <v-btn class="mx-2" type="button" @click="deleteRow">Delete Last Row</v-btn>
+                </v-col>
+                <v-col cols="auto">
+                    <v-btn class="mx-2" type="button" @click="clearLastRow">Clear Last Row</v-btn>
                 </v-col>
                 <v-col cols="auto">
                     <v-btn class="mx-2" 
@@ -127,6 +133,15 @@ export default {
 
         // Reference to the form element to reset form validation after submission
         const form = ref(null);
+
+        // Reference to a single row in the submit expenses row.
+        // rowKey property is used to reset form validation when clearing a row of its data
+        const expenses = ref([{ 
+            scope: '', day: '', month: '', year: '', amount: '', category: '', notes: '', 
+            rowKey: 0 
+        }]);
+        const months = ref(['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']);
+        
 
         const fetchScopes = async () => {
             try {
@@ -172,10 +187,17 @@ export default {
 
         const rules = {
             required: value => !!value || 'Required.',
+            scope: value => {
+                return value != null && value.trim() !== '' || 'Scope is required';
+            },
             day: value => {
                 if (!value) return 'Day is required';
                 if (isNaN(value)) return 'Day must be a number';
                 return (value >= 1 && value <= 31) || 'Day must be between 1 and 31';
+            },
+            month: value => {
+                if (!value) return 'Month is required';
+                return months.value.includes(value) || 'Invalid month selected';
             },
             year: value => {
                 if (!value) return 'Year is required';
@@ -186,14 +208,15 @@ export default {
                 if (!value) return 'Amount is required';
                 const numericValue = parseFloat(value);
                 if (isNaN(numericValue)) return 'Amount must be a valid number';
-                if (!/^[0-9]*\.?[0-9]{0,2}$/.test(value)) return 'Amount must be a number with at most two decimal places';
+                if (numericValue < 0) return 'Amount cannot be negative';
+                if (!/^\d*\.?\d{0,2}$/.test(value)) return 'Amount must be a non-negative number with at most two decimal places';
                 return true;
-            }
+            },
+            category: value => {
+                return value != null && value.trim() !== '' || 'Expense Category is required';
+            },
         };
 
-        const expenses = ref([{ scope: '', day: '', month: '', year: '', amount: '', category: '', notes: '' }]);
-        const months = ref(['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']);
-        
         const addRow = () => {
         const lastExpense = expenses.value[expenses.value.length - 1];
         expenses.value.push({ 
@@ -208,13 +231,47 @@ export default {
         };
 
         const deleteRow = () => {
-        if (expenses.value.length > 1) {
-            expenses.value.pop();
-        }
+            if (expenses.value.length > 1) {
+                expenses.value.pop();
+            }
+        };
+
+        const clearLastRow = () => {
+            const lastExpenseIndex = expenses.value.length - 1;
+            if (lastExpenseIndex >= 0) {
+                expenses.value[lastExpenseIndex] = { 
+                scope: '', day: '', month: '', year: '', amount: '', category: '', notes: '',
+                rowKey: expenses.value[lastExpenseIndex].rowKey + 1
+                };
+            }
+        };
+
+        // Custom validation method for the form, because built-in Vuetify's validate()
+        // method does not work with v-for
+        const isFormValid = () => {
+            for (let expense of expenses.value) {
+                // Check each rule; if the rule returns a string (error message), it means validation failed
+                if (typeof rules.required(expense.scope) === 'string' ||
+                    typeof rules.day(expense.day) === 'string' ||
+                    typeof rules.year(expense.year) === 'string' ||
+                    typeof rules.amount(expense.amount) === 'string') {
+                    // Validation failed
+                    return false;
+                }
+            }
+            // All validations passed
+            return true;
         };
 
         const submitExpenses = async () => {
             try {
+
+                // Check if form passes all validations
+                if (!isFormValid()) {
+                    console.log("Validation failed");
+                    return;
+                }
+
                 loading.value = true; // Activate loading animation
 
                 // If expenses are not "Joint", send the PersonID instead of the PersonName
@@ -274,6 +331,7 @@ export default {
             form,
             addRow, 
             deleteRow, 
+            clearLastRow,
             submitExpenses
         };
     }

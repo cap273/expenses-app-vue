@@ -171,19 +171,37 @@ def submit_new_expenses():
         data = request.json
         expenses = data["expenses"]
         counter = 0
+        months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
 
         try:
             with engine.connect() as conn:
                 for expense in expenses:
                     try:
                         # Extract individual fields from the expense dictionary
-                        scope = expense["scope"]
-                        day = expense["day"]
-                        month = expense["month"]
-                        year = expense["year"]
-                        amount = expense["amount"]
-                        category = expense["category"]
-                        notes = expense["notes"]
+                        scope = expense.get("scope")
+                        day = expense.get("day")
+                        month = expense.get("month")
+                        year = expense.get("year")
+                        amount = expense.get("amount")
+                        category = expense.get("category")
+                        notes = expense.get("notes")
+
+                        # Validation
+                        if not all([scope, day, month, year, amount, category]):
+                            return jsonify({"success": False, "error": "Missing required fields in the expense data"})
+
+                        try:
+                            day = int(day)
+                            year = int(year)
+                            if not (1 <= day <= 31):
+                                return jsonify({"success": False, "error": "Day must be between 1 and 31"})
+                            if not (2000 <= year <= 2050):
+                                return jsonify({"success": False, "error": "Year must be between 2000 and 2050"})
+                        except ValueError:
+                            return jsonify({"success": False, "error": "Day and Year must be integers"})
+
+                        if month not in months:
+                            return jsonify({"success": False, "error": "Invalid month selected"})
 
                         # Try to parse the date
                         try:

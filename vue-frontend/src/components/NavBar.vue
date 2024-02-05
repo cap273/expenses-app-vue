@@ -9,20 +9,20 @@
       </v-col>
 
       <!-- Middle Column -->
-      <v-col cols="6" sm="4" class="d-flex justify-center align-center">
+      <v-col cols="6" sm="4" class="d-flex justify-start align-center">
         <!-- Hamburger Menu Icon (Visible only on small screens) -->
         <v-btn icon class="d-sm-none" @click="toggleDrawer" style="align-self: center;">
           <v-icon>mdi-menu</v-icon>
         </v-btn>
 
         <!-- Regular Buttons for Large Screens (Middle Column) -->
-        <div class="d-none d-sm-flex">
+        <div class="d-none d-sm-flex flex-grow-1 align-items-center justify-start">
           <template v-if="!globalState.authenticated">
             <v-btn text href="#features" class="first-nav-button">Features</v-btn>
             <v-btn text href="#pricing">Pricing</v-btn>
           </template>
           <template v-else>
-            <v-btn text :class="[getButtonClass('InputExpenses'), 'first-nav-button']" to="/input_expenses">Input Expenses</v-btn>
+            <v-btn text :class="[getButtonClass('InputExpenses'), 'first-middle-nav-button']" to="/input_expenses">Input Expenses</v-btn>
             <v-btn text :class="getButtonClass('ViewExpenses')" to="/view_expenses">View Expenses</v-btn>
           </template>
         </div>
@@ -112,7 +112,7 @@ export default {
 </script>
 
 <style>
-.first-nav-button {
+.first-middle-nav-button {
   margin-left: 15px;
 }
 

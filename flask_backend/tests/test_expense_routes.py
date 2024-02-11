@@ -1,7 +1,7 @@
 import pytest
 from flask import json
 from datetime import datetime
-from flask_backend.database.models import db, Account, Person, Expense
+from flask_backend.database.models import db, Person, Expense
 
 
 @pytest.fixture
@@ -42,16 +42,8 @@ def setup_expenses(test_user, app):
     db.session.commit()
 
 
-def login_as_test_user(client):
-    return client.post(
-        "/api/login",
-        data=json.dumps({"username": "testuser", "password": "testpass"}),
-        content_type="application/json",
-    )
-
-
-def test_get_expenses(client, test_user, setup_expenses):
-    login_as_test_user(client)
+def test_get_expenses(client, test_user, login_as_test_user, setup_expenses):
+    login_as_test_user()
     response = client.get("/api/get_expenses")
     data = response.get_json()
 
@@ -61,8 +53,8 @@ def test_get_expenses(client, test_user, setup_expenses):
     assert len(data["expenses"]) == 2
 
 
-def test_get_categories(client, test_user):
-    login_as_test_user(client)
+def test_get_categories(client, test_user, login_as_test_user):
+    login_as_test_user()
     response = client.get("/api/get_categories")
     data = response.get_json()
 
@@ -71,8 +63,8 @@ def test_get_categories(client, test_user):
     # Add more assertions based on the expected categories data
 
 
-def test_submit_expenses(client, test_user, setup_expenses):
-    login_as_test_user(client)
+def test_submit_expenses(client, test_user, login_as_test_user, setup_expenses):
+    login_as_test_user()
     new_expense = {
         "expenses": [
             {

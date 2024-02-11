@@ -121,9 +121,7 @@ def create_persons():
 
             new_person = Person(
                 AccountID=current_user.id,
-                PersonName=person_name,
-                CreateDate=datetime.now(),
-                LastUpdated=datetime.now(),
+                PersonName=person_name
             )
 
             try:

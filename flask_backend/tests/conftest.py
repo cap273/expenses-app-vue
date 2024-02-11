@@ -1,20 +1,16 @@
+import json
 import pytest
 from dotenv import load_dotenv, find_dotenv
 from flask_backend.create_app import create_app
-from flask_backend.database.models import Account, db
+from flask_backend.database.models import Account, Person, db
 from flask_backend.utils.db_tools import populate_categories_table
 from flask_backend.database.tables import categories_table, CATEGORY_LIST
 from werkzeug.security import generate_password_hash
 
-# Add root of the project to sys.path
-import sys
-import os
-
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
-
 
 @pytest.fixture(scope="session", autouse=True)
 def load_test_env():
+    # Load test environment variables, pointing to a different database
     dotenv_path = find_dotenv(".env.test", usecwd=True)
     load_dotenv(dotenv_path=dotenv_path, override=True)
 
@@ -51,4 +47,22 @@ def test_user(app, init_database):
     user = Account(user_email=email, account_name=username, password=hashed_password)
     db.session.add(user)
     db.session.commit()
+
+    # Create a new Person instance associated with this account
+    # This is the default person for this account
+    new_person = Person(AccountID=user.id, PersonName=username)
+    db.session.add(new_person)
+    db.session.commit()
+
     return user
+
+
+@pytest.fixture
+def login_as_test_user(client):
+    def do_login():
+        return client.post(
+            "/api/login",
+            data=json.dumps({"username": "testuser", "password": "testpass"}),
+            content_type="application/json",
+        )
+    return do_login

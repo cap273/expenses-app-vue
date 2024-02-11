@@ -3,3 +3,9 @@ python_files = ["test_*.py", "*_test.py"]
 testpaths = [
     "flask_backend/tests",
 ]
+
+[tool.coverage.run]
+omit = [
+    "*/tests/*",
+    "*/__init__.py",
+]

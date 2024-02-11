@@ -1,7 +1,7 @@
 <template>
   <v-container>
     <v-row justify="center">
-      <v-col cols="12" sm="8" md="6">
+      <v-col cols="12" sm="8" md="6" style="max-width: 500px;" class="mx-auto">
         <v-card>
           <v-card-title>Login</v-card-title>
           <v-card-text>

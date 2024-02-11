@@ -5,6 +5,38 @@ from flask_login import UserMixin
 
 db = SQLAlchemy()  # Initialize Flask-SQLAlchemy
 
+class Category(db.Model):
+    __tablename__ = 'categories'
+    __table_args__ = {"implicit_returning": False}
+    
+    CategoryID = db.Column(db.Integer, primary_key=True)
+    CategoryName = db.Column(db.String(255), unique=True, nullable=False)
+    CreateDate = db.Column(db.Date)
+    LastUpdated = db.Column(db.Date)
+
+
+class Expense(db.Model):
+    __tablename__ = 'expenses'
+    
+    ExpenseID = db.Column(db.Integer, primary_key=True)
+    AccountID = db.Column(db.Integer, db.ForeignKey('accounts.AccountID'), nullable=False)
+    ExpenseScope = db.Column(db.String(255))  # Either 'Joint' or the name of an individual
+    PersonID = db.Column(db.Integer, db.ForeignKey('persons.PersonID'), nullable=True)  # NULL if it's a joint expense
+    Day = db.Column(db.Integer, nullable=False)
+    Month = db.Column(db.String(50), nullable=False)
+    Year = db.Column(db.Integer, nullable=False)
+    ExpenseDate = db.Column(db.Date, nullable=False)
+    ExpenseDayOfWeek = db.Column(db.String(50))
+    Amount = db.Column(db.Float, nullable=False)
+    AdjustedAmount = db.Column(db.Float)  # Amount after adjustments
+    ExpenseCategory = db.Column(db.String(255), nullable=False)
+    AdditionalNotes = db.Column(db.String(255))
+    CreateDate = db.Column(db.Date)
+    LastUpdated = db.Column(db.Date)
+    Currency = db.Column(db.String(50))
+    SuggestedCategory = db.Column(db.String(255))
+    CategoryConfirmed = db.Column(db.Boolean)
+
 
 class Account(UserMixin, db.Model):
     __tablename__ = "accounts"

@@ -17,6 +17,9 @@
     "sqlDatabaseName": {
       "value": "expensesdbdev"
     },
+    "testSqlDatabaseName": {
+      "value": "expensesdbtest"
+    },
     "repoUrl": {
       "value": "https://github.com/cap273/expenses-app-vue"
     },

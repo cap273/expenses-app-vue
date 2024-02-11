@@ -4,6 +4,7 @@ param appServicePlanName string
 param flaskEnvironment string
 param sqlServerName string
 param sqlDatabaseName string
+param testSqlDatabaseName string
 param sqlAdministratorLogin string
 param repoUrl string
 param allowedIpAddress string
@@ -346,6 +347,17 @@ resource sqlDeploymentScript 'Microsoft.Resources/deploymentScripts@2020-10-01' 
   dependsOn: [
     sqlDatabase
   ]
+}
+
+// Making another instance of the SQL database (without initialization scripts) for testing purposes
+resource testSqlDatabase 'Microsoft.Sql/servers/databases@2022-05-01-preview' = {
+  parent: sqlServer
+  name: testSqlDatabaseName
+  location: location
+  sku: {
+    name: 'GP_S_Gen5_1'
+    tier: 'GeneralPurpose'
+  }
 }
 
 // Firewall rule resource

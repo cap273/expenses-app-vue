@@ -2,7 +2,7 @@ from functools import wraps
 from flask import jsonify
 from flask_login import login_user, current_user
 from sqlalchemy import update, exc
-from datetime import datetime
+from datetime import datetime, timezone
 
 from ..database.models import Account
 
@@ -17,7 +17,7 @@ def login_and_update_last_login(user, engine):
             stmt = (
                 update(Account)
                 .where(Account.id == user.id)
-                .values(last_login_date=datetime.utcnow())
+                .values(last_login_date=datetime.now(timezone.utc))
             )
             connection.execute(stmt)
 

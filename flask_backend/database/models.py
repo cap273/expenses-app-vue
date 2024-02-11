@@ -5,10 +5,11 @@ from flask_login import UserMixin
 
 db = SQLAlchemy()  # Initialize Flask-SQLAlchemy
 
+
 class Category(db.Model):
-    __tablename__ = 'categories'
+    __tablename__ = "categories"
     __table_args__ = {"implicit_returning": False}
-    
+
     CategoryID = db.Column(db.Integer, primary_key=True)
     CategoryName = db.Column(db.String(255), unique=True, nullable=False)
     CreateDate = db.Column(db.Date)
@@ -16,12 +17,18 @@ class Category(db.Model):
 
 
 class Expense(db.Model):
-    __tablename__ = 'expenses'
-    
+    __tablename__ = "expenses"
+
     ExpenseID = db.Column(db.Integer, primary_key=True)
-    AccountID = db.Column(db.Integer, db.ForeignKey('accounts.AccountID'), nullable=False)
-    ExpenseScope = db.Column(db.String(255))  # Either 'Joint' or the name of an individual
-    PersonID = db.Column(db.Integer, db.ForeignKey('persons.PersonID'), nullable=True)  # NULL if it's a joint expense
+    AccountID = db.Column(
+        db.Integer, db.ForeignKey("accounts.AccountID"), nullable=False
+    )
+    ExpenseScope = db.Column(
+        db.String(255)
+    )  # Either 'Joint' or the name of an individual
+    PersonID = db.Column(
+        db.Integer, db.ForeignKey("persons.PersonID"), nullable=True
+    )  # NULL if it's a joint expense
     Day = db.Column(db.Integer, nullable=False)
     Month = db.Column(db.String(50), nullable=False)
     Year = db.Column(db.Integer, nullable=False)

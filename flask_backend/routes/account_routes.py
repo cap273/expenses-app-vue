@@ -9,15 +9,7 @@ from werkzeug.exceptions import BadRequestKeyError
 from flask_backend.utils.session import login_and_update_last_login, login_required_api
 from flask_backend.database.models import db, Account, Person
 
-account_routes = Blueprint('account_routes', __name__)
-
-@account_routes.route("/api/get_persons", methods=["GET"])
-@login_required_api
-def get_persons_api():
-    # Fetch and return persons associated with the current user's account
-    persons = Person.query.filter_by(AccountID=current_user.id).all()
-    persons_json = [person.to_json() for person in persons]
-    return jsonify(persons_json)
+account_routes = Blueprint("account_routes", __name__)
 
 
 @account_routes.route("/api/create_account", methods=["POST"])
@@ -31,7 +23,12 @@ def create_account():
 
         # Validate username length
         if len(username) <= 3:
-            return jsonify({"success": False, "error": "Username must be longer than 3 characters."})
+            return jsonify(
+                {
+                    "success": False,
+                    "error": "Username must be longer than 3 characters.",
+                }
+            )
 
         # Validate email format
         if not re.match(r"[^@]+@[^@]+\.[^@]+", email):
@@ -39,7 +36,9 @@ def create_account():
 
         # Validate password length
         if len(password) < 8:
-            return jsonify({"success": False, "error": "Password must be 8 characters or longer."})
+            return jsonify(
+                {"success": False, "error": "Password must be 8 characters or longer."}
+            )
 
         # Check if username already exists
         existing_user_by_username = Account.query.filter_by(
@@ -78,7 +77,7 @@ def create_account():
                 db.session.commit()
 
                 # Authenticate and login the new user
-                login_and_update_last_login(new_user, current_app.config['ENGINE'])
+                login_and_update_last_login(new_user, current_app.config["ENGINE"])
 
                 return jsonify(
                     {
@@ -91,7 +90,16 @@ def create_account():
 
     except BadRequestKeyError:
         return jsonify({"success": False, "error": "Invalid request"})
-    
+
+
+@account_routes.route("/api/get_persons", methods=["GET"])
+@login_required_api
+def get_persons_api():
+    # Fetch and return persons associated with the current user's account
+    persons = Person.query.filter_by(AccountID=current_user.id).all()
+    persons_json = [person.to_json() for person in persons]
+    return jsonify(persons_json)
+
 
 @account_routes.route("/api/create_persons", methods=["POST"])
 @login_required_api
@@ -107,7 +115,9 @@ def create_persons():
         for person in persons:
             person_name = person.get("person_name")
             if not person_name:
-                return jsonify({"success": False, "error": "Missing required field: person_name"})
+                return jsonify(
+                    {"success": False, "error": "Missing required field: person_name"}
+                )
 
             new_person = Person(
                 AccountID=current_user.id,
@@ -124,10 +134,12 @@ def create_persons():
                 db.session.rollback()
                 return jsonify({"success": False, "error": str(e)})
 
-        return jsonify({
-            "success": True,
-            "message": f"{successful_creations} person(s) successfully added."
-        })
+        return jsonify(
+            {
+                "success": True,
+                "message": f"{successful_creations} person(s) successfully added.",
+            }
+        )
 
     except Exception as e:
         return jsonify({"success": False, "error": str(e)})

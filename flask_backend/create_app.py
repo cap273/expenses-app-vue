@@ -27,19 +27,24 @@ login_manager = LoginManager()
 # Load environment variables from .env file
 load_dotenv()
 
+
 def create_app(test_config=None):
     app = Flask(__name__, static_folder="../vue-frontend/dist", static_url_path="/")
-    
+
     if test_config is None:
         DATABASE_URL = get_database_url(
-            os.getenv("DB_USERNAME"), os.getenv("DB_PASSWORD"), 
-            os.getenv("DB_SERVER"), os.getenv("DB_NAME")
+            os.getenv("DB_USERNAME"),
+            os.getenv("DB_PASSWORD"),
+            os.getenv("DB_SERVER"),
+            os.getenv("DB_NAME"),
         )
         app.config["FLASK_ENV"] = os.getenv("FLASK_ENV")
     else:
         DATABASE_URL = get_database_url(
-            test_config["DB_USERNAME"], test_config["DB_PASSWORD"], 
-            test_config["DB_SERVER"], test_config["DB_NAME"]
+            test_config["DB_USERNAME"],
+            test_config["DB_PASSWORD"],
+            test_config["DB_SERVER"],
+            test_config["DB_NAME"],
         )
         app.config["FLASK_ENV"] = test_config["FLASK_ENV"]
 
@@ -49,13 +54,13 @@ def create_app(test_config=None):
         logging.getLogger("sqlalchemy.engine").setLevel(logging.INFO)
     else:
         logging.basicConfig(level=logging.WARNING)
-    
+
     # Using the ORM operations of Flask-SQLAlchemy to utilize
-    # Flask extensions like Flask-Login 
+    # Flask extensions like Flask-Login
     app.config["SQLALCHEMY_DATABASE_URI"] = DATABASE_URL
 
     # Using SQLAlchemy Core to run lower-level database operations
-    app.config['ENGINE'] = create_engine(DATABASE_URL)
+    app.config["ENGINE"] = create_engine(DATABASE_URL)
 
     if app.config["FLASK_ENV"] == "development":
         print("Database URL: ", DATABASE_URL)
@@ -68,15 +73,15 @@ def create_app(test_config=None):
 
     # Attach the SQLAlchemy instance to the Flask app
     db.init_app(app)
-    
+
     login_manager.init_app(app)
     login_manager.login_view = "login"
 
     @login_manager.user_loader
     def load_user(user_id):
         return Account.query.get(int(user_id))
-    
-    populate_categories_table(app.config['ENGINE'], categories_table, CATEGORY_LIST)
+
+    populate_categories_table(app.config["ENGINE"], categories_table, CATEGORY_LIST)
 
     # Register blueprints
     app.register_blueprint(account_routes)

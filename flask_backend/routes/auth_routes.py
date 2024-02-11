@@ -9,7 +9,8 @@ from flask_backend.utils.session import login_and_update_last_login
 from flask_backend.database.models import db, Account
 
 
-auth_routes = Blueprint('auth_routes', __name__)
+auth_routes = Blueprint("auth_routes", __name__)
+
 
 @auth_routes.route("/api/login", methods=["POST"])
 def login():
@@ -25,7 +26,7 @@ def login():
         ).first()
 
         if user and user.check_password(password):
-            login_and_update_last_login(user, current_app.config['ENGINE'])
+            login_and_update_last_login(user, current_app.config["ENGINE"])
             return jsonify(
                 {
                     "authenticated": True,
@@ -65,4 +66,3 @@ def auth_status():
         )
     else:
         return jsonify({"authenticated": False})
-    

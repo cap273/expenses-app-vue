@@ -1,34 +1,22 @@
 from flask import Blueprint, jsonify, request, current_app
-from sqlalchemy import create_engine, select, case
+from sqlalchemy import select, case
 from sqlalchemy.sql import null
 from sqlalchemy.exc import SQLAlchemyError
-import os
-import re
-from dotenv import load_dotenv
-import logging
 from datetime import datetime
-from flask_login import (
-    LoginManager,
-    logout_user,
-    current_user,
-)
+from flask_login import current_user
 from werkzeug.exceptions import BadRequestKeyError
 
-from flask_backend.utils.db_tools import (
-    populate_categories_table,
-    get_categories,
-    get_database_url,
-)
-from flask_backend.utils.session import login_and_update_last_login, login_required_api
+from flask_backend.utils.db_tools import get_categories
+from flask_backend.utils.session import login_required_api
 from flask_backend.database.models import db, Account, Person
 from flask_backend.database.tables import (
     expenses_table,
     categories_table,
     persons_table,
-    CATEGORY_LIST,
 )
 
-expense_routes = Blueprint('expense_routes', __name__)
+expense_routes = Blueprint("expense_routes", __name__)
+
 
 @expense_routes.route("/api/get_expenses", methods=["GET"])
 @login_required_api
@@ -59,7 +47,7 @@ def get_expenses():
     )
 
     # Execute the query using SQLAlchemy Core
-    with current_app.config['ENGINE'].connect() as connection:
+    with current_app.config["ENGINE"].connect() as connection:
         result = connection.execute(query)
         user_expenses = result.fetchall()
 
@@ -80,7 +68,7 @@ def get_expenses():
 @login_required_api
 def get_categories_api():
     # Fetch and return all the (default) expense categories
-    categories = get_categories(current_app.config['ENGINE'], categories_table)
+    categories = get_categories(current_app.config["ENGINE"], categories_table)
     return jsonify({"categories": categories})
 
 
@@ -92,10 +80,23 @@ def submit_new_expenses():
         data = request.json
         expenses = data["expenses"]
         counter = 0
-        months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
+        months = [
+            "January",
+            "February",
+            "March",
+            "April",
+            "May",
+            "June",
+            "July",
+            "August",
+            "September",
+            "October",
+            "November",
+            "December",
+        ]
 
         try:
-            with current_app.config['ENGINE'].connect() as conn:
+            with current_app.config["ENGINE"].connect() as conn:
                 for expense in expenses:
                     try:
                         # Extract individual fields from the expense dictionary
@@ -109,20 +110,42 @@ def submit_new_expenses():
 
                         # Validation
                         if not all([scope, day, month, year, amount, category]):
-                            return jsonify({"success": False, "error": "Missing required fields in the expense data"})
+                            return jsonify(
+                                {
+                                    "success": False,
+                                    "error": "Missing required fields in the expense data",
+                                }
+                            )
 
                         try:
                             day = int(day)
                             year = int(year)
                             if not (1 <= day <= 31):
-                                return jsonify({"success": False, "error": "Day must be between 1 and 31"})
+                                return jsonify(
+                                    {
+                                        "success": False,
+                                        "error": "Day must be between 1 and 31",
+                                    }
+                                )
                             if not (2000 <= year <= 2050):
-                                return jsonify({"success": False, "error": "Year must be between 2000 and 2050"})
+                                return jsonify(
+                                    {
+                                        "success": False,
+                                        "error": "Year must be between 2000 and 2050",
+                                    }
+                                )
                         except ValueError:
-                            return jsonify({"success": False, "error": "Day and Year must be integers"})
+                            return jsonify(
+                                {
+                                    "success": False,
+                                    "error": "Day and Year must be integers",
+                                }
+                            )
 
                         if month not in months:
-                            return jsonify({"success": False, "error": "Invalid month selected"})
+                            return jsonify(
+                                {"success": False, "error": "Invalid month selected"}
+                            )
 
                         # Try to parse the date
                         try:
@@ -131,7 +154,12 @@ def submit_new_expenses():
                             ).date()
                         except ValueError:
                             # Handle invalid date
-                            return jsonify({"success": False, "error": f"Invalid date: {day}-{month}-{year}"})
+                            return jsonify(
+                                {
+                                    "success": False,
+                                    "error": f"Invalid date: {day}-{month}-{year}",
+                                }
+                            )
 
                         # Determine if the scope is joint or individual
                         person_id = None if scope == "Joint" else scope
@@ -139,9 +167,16 @@ def submit_new_expenses():
 
                         # Validate that any person_id is associated with the current user's account
                         if person_id is not None:
-                            person = Person.query.filter_by(PersonID=person_id, AccountID=current_user.id).first()
+                            person = Person.query.filter_by(
+                                PersonID=person_id, AccountID=current_user.id
+                            ).first()
                             if person is None:
-                                return jsonify({"success": False, "error": f"PersonID {person_id} is not associated with the current user's account."})
+                                return jsonify(
+                                    {
+                                        "success": False,
+                                        "error": f"PersonID {person_id} is not associated with the current user's account.",
+                                    }
+                                )
 
                         conn.execute(
                             expenses_table.insert().values(

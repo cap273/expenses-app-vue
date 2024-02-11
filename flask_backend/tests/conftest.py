@@ -6,6 +6,12 @@ from flask_backend.utils.db_tools import populate_categories_table
 from flask_backend.database.tables import categories_table, CATEGORY_LIST
 from werkzeug.security import generate_password_hash
 
+# Add root of the project to sys.path
+import sys
+import os
+
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
+
 
 @pytest.fixture(scope="session", autouse=True)
 def load_test_env():

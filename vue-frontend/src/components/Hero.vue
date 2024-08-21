@@ -2,7 +2,7 @@
   <v-container>
     <v-row justify="center" class="hero-container">
       <v-col cols="12" class="text-center">
-        <h1 class="display-1 hero-header">Take control of your financial life</h1>
+        <h1 class="display-1 hero-header">Take control of your financial life you wuss!</h1>
         <p class="subtitle-1 hero-paragraph">With Expenses App, record and analyze your personal or household expenses like a CFO.</p>
         <v-btn large color="primary" to="/signup">Get started</v-btn>
         <v-img src="@/assets/hero.png" class="hero-image"></v-img>

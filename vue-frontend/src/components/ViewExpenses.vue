@@ -27,7 +27,7 @@
         :no-data-text="'No expenses found'"
         items-per-page="25"
         show-select
-        v-model="selected"
+        v-model:selection="selected"
         ></v-data-table>
     </v-container>
 </template>
@@ -118,7 +118,7 @@ export default {
       fetchExpenses();
     });
 
-    return { loading, search, expenses, headers };
+    return { loading, search, expenses, headers, selected };
   }
 };
 </script>

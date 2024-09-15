@@ -69,6 +69,9 @@ export default {
           throw new Error('Failed to fetch expenses');
         }
         const data = await response.json();
+
+        console.log('API Response:', data); // Log the response
+
         if (data.success) {
           expenses.value = data.expenses;
         }

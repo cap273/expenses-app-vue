@@ -27,7 +27,7 @@
         :no-data-text="'No expenses found'"
         items-per-page="25"
         show-select
-        v-model:selection="selected"
+        v-model="selected"
         ></v-data-table>
     </v-container>
 </template>

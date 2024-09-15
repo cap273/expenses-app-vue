@@ -95,7 +95,7 @@ export default {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            expenseIds: selected.value.map(expense => expense.id), // Assuming each expense has an 'id'
+            expenseIds: selected.value.map(expense => expense.ExpenseID), // Delete using ExpenseID key
           }),
         });
 

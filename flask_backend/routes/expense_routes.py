@@ -29,6 +29,7 @@ def get_expenses():
     # Create a SQL query to select expenses and join with the persons table
     query = (
         select(
+            expenses_table.c.ExpenseID,
             expenses_table.c.ExpenseDate,
             expenses_table.c.Amount,
             expenses_table.c.ExpenseCategory,
@@ -218,3 +219,20 @@ def submit_new_expenses():
 
     except BadRequestKeyError:
         return jsonify({"success": False, "error": "Invalid request"})
+
+#Delete expenses
+@expense_routes.route("/api/delete_expenses", methods=["POST"])
+@login_required_api
+def delete_expenses():
+    try:
+        data = request.json
+        expense_ids = data["expenseIds"]
+
+        with current_app.config["ENGINE"].connect() as connection:
+            connection.execute(
+                expenses_table.delete().where(expenses_table.c.ExpenseID.in_(expense_ids))
+            )
+
+        return jsonify({"success": True, "message": "Expenses deleted successfully."})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)})

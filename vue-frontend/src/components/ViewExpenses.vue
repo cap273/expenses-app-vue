@@ -43,7 +43,6 @@ export default {
     
     const expenses = ref([]);
     const headers = ref([
-    { title: 'Select', value: 'data-table-select', sortable: false },
     { 
         title: 'Scope', 
         align: 'start', 

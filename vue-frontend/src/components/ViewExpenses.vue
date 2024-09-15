@@ -27,7 +27,7 @@
         :no-data-text="'No expenses found'"
         items-per-page="25"
         show-select
-        v-model:selected="selected"
+        v-model:selection="selected"
         ></v-data-table>
     </v-container>
 </template>
@@ -106,7 +106,7 @@ export default {
         const data = await response.json();
         if (data.success) {
           // Remove deleted expenses from the list
-          expenses.value = expenses.value.filter(expense => !selected.value.includes(expense));
+          expenses.value = expenses.value.filter(expense => !selected.value.some(selectedExpense => selectedExpense.ExpenseID === expense.ExpenseID));
           selected.value = []; // Clear the selection after deletion
         }
       } catch (error) {

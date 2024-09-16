@@ -118,7 +118,7 @@ export default {
       fetchExpenses();
     });
 
-    return { loading, search, expenses, headers, selected };
+    return { loading, search, expenses, headers, selected, deleteSelectedExpenses };
   }
 };
 </script>

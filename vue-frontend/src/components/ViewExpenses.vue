@@ -12,12 +12,12 @@
         </div>
 
         <!-- Action Buttons -->
-        <v-btn color="red" @click="deleteSelectedExpenses" v-if="selected.length > 0">
+        <v-btn color="red" @click="deleteSelectedExpenses" >
           <v-icon left>mdi-trash-can</v-icon>
           Delete Selected
         </v-btn>
 
-        <v-data-table v-else
+        <v-data-table 
         :headers="headers"
         :items="expenses"
         :search="search"

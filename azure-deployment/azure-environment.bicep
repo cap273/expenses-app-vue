@@ -363,7 +363,7 @@ resource testSqlDatabase 'Microsoft.Sql/servers/databases@2022-05-01-preview' = 
 // Firewall rule resource
 resource sqlFirewallRule 'Microsoft.Sql/servers/firewallRules@2022-05-01-preview' = [for ip in allowedIpAddresses: {
   parent: sqlServer
-  name: 'Allow${ip}'
+  name: 'Allow-${ip}'
   properties: {
     startIpAddress: ip
     endIpAddress: ip

@@ -26,8 +26,11 @@
     "sqlAdministratorLogin": {
       "value": "charliebrown"
     },
-    "allowedIpAddress": {
-      "value": "104.244.240.161"
+    "allowedIpAddresses": {
+      "value": [
+        "104.244.240.161",
+        "107.216.190.211"
+      ]
     }
   }
 }

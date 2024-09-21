@@ -7,7 +7,7 @@ param sqlDatabaseName string
 param testSqlDatabaseName string
 param sqlAdministratorLogin string
 param repoUrl string
-param allowedIpAddress string
+param allowedIpAddresses array
 @secure()
 param sqlAdministratorPassword string
 @secure()
@@ -361,14 +361,14 @@ resource testSqlDatabase 'Microsoft.Sql/servers/databases@2022-05-01-preview' = 
 }
 
 // Firewall rule resource
-resource sqlFirewallRule 'Microsoft.Sql/servers/firewallRules@2022-05-01-preview' = {
+resource sqlFirewallRule 'Microsoft.Sql/servers/firewallRules@2022-05-01-preview' = [for ip in allowedIpAddresses: {
   parent: sqlServer
-  name: 'AllowClientIP'
+  name: 'Allow${ip}'
   properties: {
-    startIpAddress: allowedIpAddress
-    endIpAddress: allowedIpAddress
+    startIpAddress: ip
+    endIpAddress: ip
   }
-}
+}]
 
 // Firewall rule resource for Azure services
 resource sqlAzureServicesFirewallRule 'Microsoft.Sql/servers/firewallRules@2022-05-01-preview' = {

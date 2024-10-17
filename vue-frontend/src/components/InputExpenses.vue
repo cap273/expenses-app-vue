@@ -113,10 +113,17 @@
 </template>
 
 <script>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, watch } from 'vue';
 
 export default {
-    setup() {
+    //nExpenseData prop added to edit existing expense
+    props: {
+    expenseData: {
+      type: Object,
+      default: null,
+    },
+  },
+    setup(props,{emit}) {
 
         const loading = ref(false); // State to manage loading status
 
@@ -138,11 +145,46 @@ export default {
         // rowKey property is used to reset form validation when clearing a row of its data
         const expenses = ref([{ 
             scope: '', day: '', month: '', year: '', amount: '', category: '', notes: '', 
-            rowKey: 0 
+            rowKey: 0 ,ExpenseID: null,
         }]);
         const months = ref(['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']);
         
-
+        //watch for changes in expenseData prop to populate the form
+        watch(
+      () => props.expenseData,
+      (newVal) => {
+        if (newVal) {
+            console.log('Received expenseData:', newVal);
+          expenses.value = [{
+            scope: newVal.PersonName || '',
+            day: newVal.Day || '',
+            month: newVal.Month || '',
+            year: newVal.Year || '',
+            amount: newVal.Amount ? newVal.Amount.replace(/[^0-9.]/g, '') : '',
+            category: newVal.ExpenseCategory || '',
+            notes: newVal.AdditionalNotes || '',
+            ExpenseID: newVal.ExpenseID,
+          }];
+        }
+        else {
+          // If no expenseData, reset the form
+          expenses.value = [
+            {
+              scope: '',
+              day: '',
+              month: '',
+              year: '',
+              amount: '',
+              category: '',
+              notes: '',
+              rowKey: 0,
+              ExpenseID: null,
+            },
+          ];
+        }
+      },
+      { immediate: true }
+    );
         const fetchScopes = async () => {
             try {
                 const response = await fetch('/api/get_persons');
@@ -281,12 +323,22 @@ export default {
                     scope: expense.scope === 'Joint' ? 'Joint' : nameToIdMap.value[expense.scope]
                 }));
 
-                const response = await fetch('/api/submit_expenses', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ expenses: modifiedExpenses }),
+                //Defining variables for response
+                let url = '/api/submit_expenses';
+                let method = 'POST';
+
+                // Check if we're editing an existing expense
+                if (modifiedExpenses[0].ExpenseID) {
+                url = '/api/update_expense';
+                method = 'PUT';
+                }
+
+                const response = await fetch(url, {
+                method,
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ expenses: modifiedExpenses }),
                 });
 
                 if (!response.ok) {
@@ -303,6 +355,8 @@ export default {
                     if (form.value) {
                         form.value.reset(); // Reset the form validation
                     }
+                    //New emit for updating expenses
+                    emit('update-expenses');
                 } else {
                     responseMessage.value = { message: responseData.error, type: 'error' };
                 }

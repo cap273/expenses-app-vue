@@ -53,8 +53,17 @@ def get_expenses():
         user_expenses = result.fetchall()
 
     # Convert raw results to a list of dicts
-    expenses = [row._asdict() for row in user_expenses]
-
+    #expenses = [row._asdict() for row in user_expenses]
+    #modified expenses to split out expense date based on form inptus
+    expenses = [
+    {
+        **row._asdict(),
+        "Day": row.ExpenseDate.day,
+        "Month": row.ExpenseDate.strftime("%B"),
+        "Year": row.ExpenseDate.year,
+    }
+    for row in user_expenses
+]
     # Format the amount in each expense
     for expense in expenses:
         if expense["Currency"] == "USD":
@@ -226,13 +235,98 @@ def submit_new_expenses():
 def delete_expenses():
     try:
         data = request.json
-        expense_ids = data["expenseIds"]
+        expense_ids = data.get("expenseIds", [])
+
+        # Log the received expense IDs for debugging
+        print("Received expense IDs for deletion:", expense_ids)
+
+        if not expense_ids:
+            return jsonify({"success": False, "message": "No expense IDs provided."})
 
         with current_app.config["ENGINE"].connect() as connection:
-            connection.execute(
-                expenses_table.delete().where(expenses_table.c.ExpenseID.in_(expense_ids))
-            )
+            # Execute the delete statement
+            delete_statement = expenses_table.delete().where(expenses_table.c.ExpenseID.in_(expense_ids))
+            result = connection.execute(delete_statement)
+
+            # Log the result of the deletion operation
+            print(f"Deleted {result.rowcount} rows from expenses_table.")
+
+            # If no rows were deleted, provide feedback
+            if result.rowcount == 0:
+                return jsonify({"success": False, "message": "No expenses were deleted, possible invalid ExpenseIDs."})
+
+            # Explicit commit to make sure the changes persist
+            connection.commit()
 
         return jsonify({"success": True, "message": "Expenses deleted successfully."})
+
+    except Exception as e:
+        # Log the error if something went wrong
+        print(f"Error during deletion: {str(e)}")
+        return jsonify({"success": False, "error": str(e)})
+
+#Update expenses
+@expense_routes.route("/api/update_expense", methods=["PUT"])
+@login_required_api
+def update_expense():
+    try:
+        data = request.json
+        expenses = data.get("expenses", [])
+
+        if not expenses:
+            return jsonify({"success": False, "error": "No expense data provided."})
+
+        expense = expenses[0]  # Assuming only one expense is edited at a time
+        expense_id = expense.get("ExpenseID")
+
+        if not expense_id:
+            return jsonify({"success": False, "error": "ExpenseID is required for updating."})
+
+        # Validate and extract data
+        # ... (same validation as in submit_new_expenses)
+
+        # Extract individual fields from the expense dictionary
+        scope = expense.get("scope")
+        day = expense.get("day")
+        month = expense.get("month")
+        year = expense.get("year")
+        amount = expense.get("amount")
+        category = expense.get("category")
+        notes = expense.get("notes")
+
+        # ... (rest of validation)
+
+        # Prepare data for update
+        expense_date = datetime.strptime(f"{year}-{month}-{day}", "%Y-%B-%d").date()
+        person_id = None if scope == "Joint" else scope
+        expense_scope = "Joint" if scope == "Joint" else "Individual"
+
+        with current_app.config["ENGINE"].connect() as conn:
+            update_stmt = (
+                expenses_table.update()
+                .where(
+                    expenses_table.c.ExpenseID == expense_id,
+                    expenses_table.c.AccountID == current_user.id,
+                )
+                .values(
+                    ExpenseScope=expense_scope,
+                    PersonID=person_id,
+                    Day=day,
+                    Month=month,
+                    Year=year,
+                    ExpenseDate=expense_date,
+                    Amount=float(amount.replace(",", "")),
+                    ExpenseCategory=category,
+                    AdditionalNotes=notes,
+                )
+            )
+            result = conn.execute(update_stmt)
+            conn.commit()
+
+            if result.rowcount == 0:
+                return jsonify({"success": False, "error": "Expense not found or not authorized."})
+
+        return jsonify({"success": True, "message": "Expense updated successfully."})
+
     except Exception as e:
         return jsonify({"success": False, "error": str(e)})

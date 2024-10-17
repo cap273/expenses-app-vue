@@ -4,6 +4,7 @@ import Hero from './components/Hero.vue';
 import SignUpWithLogin from '@/views/SignUpWithLogin.vue';
 import InputExpenses from './components/InputExpenses.vue';
 import ViewExpenses from './components/ViewExpenses.vue';
+import Profile from '@/components/Profile.vue';
 
 const routes = [
   {
@@ -36,11 +37,19 @@ const routes = [
     name: 'InputExpenses',
     component: InputExpenses,
   },
+  {
+    path: '/profile',
+    name: 'Profile',
+    component: Profile,
+    meta: { requiresAuth: true },
+  },
 ];
 
 const router = createRouter({
   history: createWebHistory(),
   routes,
 });
+
+
 
 export default router;

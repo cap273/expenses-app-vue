@@ -46,7 +46,7 @@
 
             <v-data-table
         :headers="headers"
-        :items="expenses"
+        :items="processedExpenses"
         :search="search"
         class="elevation-1"
         item-value="ExpenseID"
@@ -55,7 +55,16 @@
         items-per-page="25"
         show-select
         v-model="selected"
+        :options="tableOptions"
+        @update:options="updateTableOptions"
       >
+        <!-- :group-by="['ExpenseMonth']" -->
+
+        <!-- Scoped Slot for Expense Date Column -->
+        <template v-slot:item.ExpenseDate="{ item }">
+          {{ formatDate(item.ExpenseDate) }}
+        </template>
+
         <!-- Scoped Slot for Actions Column -->
         <template v-slot:item.actions="{ item }">
           <v-btn color="blue" @click="editExpense(item)">
@@ -63,6 +72,16 @@
             Edit
           </v-btn>
         </template>
+
+             <!-- Group Header Slot 
+          <template v-slot:group="{ group, items }">
+            <tr>
+              <td :colspan="headers.length + 1" class="group-header">
+                <strong>{{ group }}</strong>
+              </td>
+            </tr>
+          </template>
+        -->
       </v-data-table>
 
         <!-- Edit Expense Dialog -->
@@ -102,6 +121,10 @@
 
 .mb-5 {
   margin-bottom: 3rem;
+}
+.group-header {
+  background-color: #f5f5f5;
+  font-size: 1.1em;
 }
 </style>
 
@@ -210,6 +233,34 @@ export default {
 
     onMounted(fetchExpenses);
 
+    const formatDate = (dateString) => {
+      const options = { year: 'numeric', month: 'long', day: 'numeric' };
+      const date = new Date(dateString);
+      return date.toLocaleDateString(undefined, options);
+    };
+
+    const tableOptions = ref({
+        sortBy: ['ExpenseDate'],
+        sortDesc: [true], // Set to true for descending order (newest first)
+        page: 1,
+        itemsPerPage: 25,
+      });
+
+      const updateTableOptions = (newOptions) => {
+        tableOptions.value = newOptions;
+      };
+
+      const processedExpenses = computed(() => {
+        return expenses.value.map((expense) => {
+          const date = new Date(expense.ExpenseDate);
+          const month = date.toLocaleString('default', { month: 'long', year: 'numeric' });
+          return {
+            ...expense,
+            ExpenseMonth: month,
+          };
+        });
+      });
+
     //new chart capability
     const selectedTimePeriod = ref('month'); // Default to current month
 
@@ -302,6 +353,10 @@ export default {
       selectedTimePeriod,
       chartData,
       chartOptions,
+      formatDate,
+      tableOptions,
+      updateTableOptions,
+      processedExpenses,
     };
   },
 };

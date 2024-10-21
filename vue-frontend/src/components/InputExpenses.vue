@@ -18,6 +18,7 @@
                     <th class="column-amount">Amount</th>
                     <th class="column-category">Expense Category</th>
                     <th class="column-notes">Additional Notes</th>
+                    <th class="column-set-date">Set Date</th>
                 </tr>
                 </thead>
                 <tbody>
@@ -86,6 +87,10 @@
                         v-model="expense.notes"
                         class="input-field .input-field--additionalnotes"
                     ></v-text-field>
+                    </td>
+                    <!-- current date button-->
+                    <td>
+                    <v-btn small @click="setCurrentDate(expense)">Today</v-btn>
                     </td>
                 </tr>
             </tbody>
@@ -374,6 +379,14 @@ export default {
             fetchCategories();
         });
 
+        //current date function
+         function setCurrentDate(expense) {
+            const today = new Date();
+            expense.day = today.getDate();
+            expense.month = months.value[today.getMonth()];
+            expense.year = today.getFullYear();
+            }
+
         return { 
             expenses,
             scopes, 
@@ -386,7 +399,8 @@ export default {
             addRow, 
             deleteRow, 
             clearLastRow,
-            submitExpenses
+            submitExpenses,
+            setCurrentDate,
         };
     }
 };

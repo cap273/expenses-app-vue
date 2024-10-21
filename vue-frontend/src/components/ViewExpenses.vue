@@ -1,5 +1,26 @@
 <template>
   <v-container>
+          <!-- Chart and Time Period Selection -->
+        <div class="chart-container mb-5">
+          <!-- Time Period Buttons -->
+          <v-btn-toggle v-model="selectedTimePeriod" mandatory>
+            <v-btn value="month">Month</v-btn>
+            <v-btn value="year">Year</v-btn>
+            <v-btn value="lifetime">Lifetime</v-btn>
+          </v-btn-toggle>
+
+            <!-- Bar Chart -->
+            <div class="chart-wrapper" v-if="chartData && chartData.labels && chartData.labels.length > 0">
+              <BarChart :data="chartData" :options="chartOptions" />
+            </div>
+            <!-- Optional: Display a message when there's no data -->
+            <div v-else class="no-data-message">
+              <p>No expenses to display for the selected time period.</p>
+          </div>
+
+        </div>
+
+
       <v-text-field
       v-model="search"
       label="Search"
@@ -12,7 +33,8 @@
       </div>
 
       <!-- Action Buttons -->
-      <v-btn color="red" @click="deleteSelectedExpenses" >
+      <v-btn color="red" @click="deleteSelectedExpenses" 
+      v-if="selected.length > 0">
         <v-icon left>mdi-trash-can</v-icon>
         Delete 
       </v-btn> 
@@ -68,13 +90,36 @@
   </v-container>
 </template>
 
+<style scoped>
+.chart-container {
+  margin-bottom: 20px;
+}
+
+.chart-wrapper {
+  position: relative;
+  height: 400px; /* Adjust height as needed */
+}
+
+.mb-5 {
+  margin-bottom: 3rem;
+}
+</style>
+
+
 <script>
-import { ref, onMounted, watch } from 'vue';
+import { ref, onMounted, watch, computed } from 'vue';
 import InputExpenses from './InputExpenses.vue';
+//adding charts for expenses
+import { Bar } from 'vue-chartjs';
+import { Chart, registerables } from 'chart.js';
+
+//charts
+Chart.register(...registerables);
 
 export default {
   components: {
     InputExpenses,
+    BarChart: Bar,
   },
   setup() {
     const loading = ref(true);
@@ -165,6 +210,84 @@ export default {
 
     onMounted(fetchExpenses);
 
+    //new chart capability
+    const selectedTimePeriod = ref('month'); // Default to current month
+
+        const chartOptions = {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              display: false,
+            },
+          },
+        };
+
+              const chartData = computed(() => {
+        // Process expenses based on selectedTimePeriod
+        const filteredExpenses = expenses.value.filter(expense => {
+          const expenseDate = new Date(expense.ExpenseDate);
+          const now = new Date();
+          if (selectedTimePeriod.value === 'month') {
+            return (
+              expenseDate.getFullYear() === now.getFullYear() &&
+              expenseDate.getMonth() === now.getMonth()
+            );
+          } else if (selectedTimePeriod.value === 'year') {
+            return expenseDate.getFullYear() === now.getFullYear();
+          } else if (selectedTimePeriod.value === 'lifetime') {
+            return true; // Include all expenses
+          }
+          return false;
+        });
+
+        // Aggregate expenses by category
+        const categoryTotals = {};
+
+        filteredExpenses.forEach(expense => {
+        const category = expense.ExpenseCategory || 'Uncategorized';
+        let amount = 0;
+
+        if (expense.Amount) {
+          const amountString = expense.Amount.toString();
+          amount = parseFloat(amountString.replace(/[^0-9.-]+/g, ""));
+        }
+
+        if (!categoryTotals[category]) {
+          categoryTotals[category] = 0;
+        }
+        categoryTotals[category] += amount;
+      });
+
+        const labels = Object.keys(categoryTotals);
+        const data = Object.values(categoryTotals);
+
+        // Ensure that labels and datasets are always arrays
+        return {
+          labels: labels.length > 0 ? labels : ['No Data'],
+          datasets: [
+            {
+              label: 'Total Expenses',
+              data: data.length > 0 ? data : [0],
+              backgroundColor: labels.length > 0 ? generateColors(labels.length) : ['#CCCCCC'],
+            },
+          ],
+        };
+      });
+
+
+        // Function to generate colors for the chart
+        function generateColors(count) {
+          const colors = [];
+          for (let i = 0; i < count; i++) {
+            // Generate colors using HSL for better visual distinction
+            const color = `hsl(${(i * 360) / count}, 70%, 50%)`;
+            colors.push(color);
+          }
+          return colors;
+        }
+
+
     return {
       loading,
       search,
@@ -176,6 +299,9 @@ export default {
       selectedExpense,
       editExpense,
       handleUpdateExpenses,
+      selectedTimePeriod,
+      chartData,
+      chartOptions,
     };
   },
 };

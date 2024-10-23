@@ -1,80 +1,87 @@
 <template>
   <v-app-bar app>
-    <v-row no-gutters>
-      <!-- Left-most Column -->
-      <v-col cols="2" sm="2" class="d-flex">
-        <v-toolbar-title>
-          <!-- <v-img :src="placeholder-logo.png" @click="$router.push('/')" class="clickable"></v-img>-->
-        </v-toolbar-title>
-      </v-col>
-
-      <!-- Middle Column -->
-      <v-col cols="5" sm="5" class="d-flex justify-start align-center">
-        <v-img src="@/assets/randomSimpleLogo.png" max-height="50"  max-width="50"
-           contain 
-           alt="Logo" @click="$router.push('/')" class="clickable"></v-img>
-        <!-- Hamburger Menu Icon (Visible only on small screens) -->
-        <v-btn icon class="d-sm-none" @click="toggleDrawer" style="align-self: center;">
+    <!-- Wrap navbar content in a container with max-width of 1400px -->
+    <v-container fluid class="container-1400">
+      <v-row no-gutters class="align-center">
+        <!-- Left Column: Logo -->
+        <v-col cols="auto" class="d-flex align-center">
+          <!-- Hamburger Menu Icon (Visible only on small screens) -->
+          <v-btn icon class="d-lg-none mr-2" @click="toggleDrawer" style="align-self: center;">
           <v-icon>mdi-menu</v-icon>
         </v-btn>
+          <v-img
+            src="@/assets/randomSimpleLogo.png"
+            width="50"
+            height="50"
+            alt="Logo"
+            @click="$router.push('/')"
+            class="clickable"
+          ></v-img>
+        </v-col>
 
-        <!-- Regular Buttons for Large Screens (Middle Column) -->
-        <div class="d-none d-sm-flex flex-grow-1 align-items-center justify-start">
+        <!-- Middle Column: Navigation Links -->
+        <v-col cols="auto" class="d-none d-lg-flex align-center">
+        <!--Regular size for normal-->
           <template v-if="!globalState.authenticated">
             <v-btn text href="#features" class="first-nav-button">Features</v-btn>
             <v-btn text href="#pricing">Pricing</v-btn>
-            <!--<v-btn text href="#aboutus">About Us - Added by Janusz</v-btn>-->
           </template>
           <template v-else>
-            <v-btn text :class="[getButtonClass('InputExpenses'), 'first-middle-nav-button']" to="/input_expenses">Input Expenses</v-btn>
-            <v-btn text :class="getButtonClass('ViewExpenses')" to="/view_expenses">View Expenses</v-btn>
+            <v-btn
+              text
+              :class="[getButtonClass('InputExpenses'), 'first-middle-nav-button']"
+              to="/input_expenses"
+            >Input Expenses</v-btn>
+            <v-btn
+              text
+              :class="getButtonClass('ViewExpenses')"
+              to="/view_expenses"
+            >View Expenses</v-btn>
           </template>
-        </div>
-      </v-col>
+        </v-col>
 
-      <!-- Right-most Column -->
-      <v-col cols="3" sm="3" class="d-flex justify-end align-center">
-        <template v-if="!globalState.authenticated">
-          <v-btn text to="/login" class="mr-1">Log In</v-btn>
-          <v-btn outlined to="/signup" class="mr-4">Sign Up</v-btn>
-        </template>
-        <template v-else>
-          <v-btn text class="d-flex align-center">
+        <!-- Right Column: User Actions -->
+        <v-spacer></v-spacer>
 
-            <!-- Loading Icon when Logging out -->
-            <v-progress-circular v-if="isLoggingOut" indeterminate size="24"></v-progress-circular>
+        <v-col cols="auto" class="d-flex align-center">
+          <template v-if="!globalState.authenticated">
+            <v-btn text to="/login" class="mr-1">Log In</v-btn>
+            <v-btn outlined to="/signup" class="mr-4">Sign Up</v-btn>
+          </template>
+          <template v-else>
+            <v-btn text class="d-flex align-center">
+              <!-- Loading Icon when Logging out -->
+              <v-progress-circular
+                v-if="isLoggingOut"
+                indeterminate
+                size="24"
+              ></v-progress-circular>
 
-            <!-- Account Icon and Username -->
-            <template v-else>
-              <v-icon left>mdi-account</v-icon>
-              {{ globalState.username }}
-            </template>
+              <!-- Account Icon and Username -->
+              <template v-else>
+                <v-icon left>mdi-account</v-icon>
+                {{ globalState.username }}
+              </template>
 
-            <!-- User Menu -->
-            <v-menu v-if="!isLoggingOut" activator="parent" offset-y>
-              <v-list>
-                <v-list-item link :to="{ name: 'Profile' }">
-                  <v-list-item-title>Profile</v-list-item-title>
-                </v-list-item>
-                <v-list-item @click="logout">
-                  <v-list-item-title>Log Out</v-list-item-title>
-                </v-list-item>
-              </v-list>
-            </v-menu>
-
-          </v-btn>
-        </template>
-      </v-col>
-      <!--spacer column-->
-      <v-col cols="2" sm="2" class="d-flex justify-end align-center">
-        <v-toolbar-title>
-          <!-- <v-img :src="placeholder-logo.png" @click="$router.push('/')" class="clickable"></v-img>-->
-        </v-toolbar-title>
-      </v-col>
-
-    </v-row>
+              <!-- User Menu -->
+              <v-menu v-if="!isLoggingOut" activator="parent" offset-y>
+                <v-list>
+                  <v-list-item link :to="{ name: 'Profile' }">
+                    <v-list-item-title>Profile</v-list-item-title>
+                  </v-list-item>
+                  <v-list-item @click="logout">
+                    <v-list-item-title>Log Out</v-list-item-title>
+                  </v-list-item>
+                </v-list>
+              </v-menu>
+            </v-btn>
+          </template>
+        </v-col>
+      </v-row>
+    </v-container>
   </v-app-bar>
 </template>
+
 
 
 <script>
@@ -123,6 +130,12 @@ export default {
 </script>
 
 <style>
+
+.container-1400 {
+  max-width: 1400px !important;
+  margin: 0 auto;
+}
+
 .first-middle-nav-button {
   margin-left: 15px;
 }
@@ -146,5 +159,14 @@ export default {
 
 .dark-blue {
   color: darkblue;
+}
+
+/* Adjust the margin or padding as needed */
+.mr-1 {
+  margin-right: 8px;
+}
+
+.mr-4 {
+  margin-right: 32px;
 }
 </style>

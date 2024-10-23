@@ -1,4 +1,41 @@
 <template>
+
+    <!-- Navigation Drawer -->
+    <v-navigation-drawer
+      v-model="drawer"
+      temporary
+    >
+      <v-list>
+        <template v-if="!globalState.authenticated">
+          <v-list-item link href="#features">
+            <v-list-item-title>Features</v-list-item-title>
+          </v-list-item>
+          <v-list-item link href="#pricing">
+            <v-list-item-title>Pricing</v-list-item-title>
+          </v-list-item>
+          <!--
+                    <v-list-item link to="/login">
+            <v-list-item-title>Log In</v-list-item-title>
+          </v-list-item>
+          <v-list-item link to="/signup">
+            <v-list-item-title>Sign Up</v-list-item-title>
+          </v-list-item>
+           -->
+        </template>
+        <template v-else>
+          <v-list-item link to="/input_expenses">
+            <v-list-item-title>Input Expenses</v-list-item-title>
+          </v-list-item>
+          <v-list-item link to="/view_expenses">
+            <v-list-item-title>View Expenses</v-list-item-title>
+          </v-list-item>
+          <v-list-item @click="logout">
+            <v-list-item-title>Log Out</v-list-item-title>
+          </v-list-item>
+        </template>
+      </v-list>
+    </v-navigation-drawer>
+
   <v-app-bar app>
     <!-- Wrap navbar content in a container with max-width of 1400px -->
     <v-container fluid class="container-1400">
@@ -6,7 +43,7 @@
         <!-- Left Column: Logo -->
         <v-col cols="auto" class="d-flex align-center">
           <!-- Hamburger Menu Icon (Visible only on small screens) -->
-          <v-btn icon class="d-lg-none mr-2" @click="toggleDrawer" style="align-self: center;">
+          <v-btn icon class="d-lg-none mr-2" @click="drawer = !drawer">
           <v-icon>mdi-menu</v-icon>
         </v-btn>
           <v-img
@@ -80,6 +117,7 @@
       </v-row>
     </v-container>
   </v-app-bar>
+
 </template>
 
 
@@ -94,6 +132,8 @@ export default {
   setup() {
 
     const isLoggingOut = ref(false);  // Indicates whether user is logging out
+    const drawer = ref(false); // Controls the navigation drawer
+
 
     // Method to toggle drawer state
     const toggleDrawer = () => {
@@ -118,6 +158,7 @@ export default {
     };
 
     return {
+      drawer,
       toggleDrawer,
       getButtonClass,
       logout,
@@ -169,4 +210,35 @@ export default {
 .mr-4 {
   margin-right: 32px;
 }
+
+.d-none {
+  display: none !important;
+}
+
+.d-lg-flex {
+  display: flex !important;
+}
+
+.d-lg-none {
+  display: none !important;
+}
+
+@media (min-width: 1280px) {
+  .d-lg-none {
+    display: none !important;
+  }
+  .d-lg-flex {
+    display: flex !important;
+  }
+}
+
+@media (max-width: 1280px) {
+  .d-lg-none {
+    display: block !important;
+  }
+  .d-lg-flex {
+    display: none !important;
+  }
+}
+
 </style>

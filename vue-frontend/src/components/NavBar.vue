@@ -2,14 +2,17 @@
   <v-app-bar app>
     <v-row no-gutters>
       <!-- Left-most Column -->
-      <v-col cols="2" sm="3" class="d-flex justify-center align-center">
+      <v-col cols="2" sm="2" class="d-flex">
         <v-toolbar-title>
-          <v-img :src="placeholderLogo" @click="$router.push('/')" class="clickable"></v-img>
+          <!-- <v-img :src="placeholder-logo.png" @click="$router.push('/')" class="clickable"></v-img>-->
         </v-toolbar-title>
       </v-col>
 
       <!-- Middle Column -->
-      <v-col cols="6" sm="4" class="d-flex justify-start align-center">
+      <v-col cols="5" sm="5" class="d-flex justify-start align-center">
+        <v-img src="@/assets/randomSimpleLogo.png" max-height="50"  max-width="50"
+           contain 
+           alt="Logo" @click="$router.push('/')" class="clickable"></v-img>
         <!-- Hamburger Menu Icon (Visible only on small screens) -->
         <v-btn icon class="d-sm-none" @click="toggleDrawer" style="align-self: center;">
           <v-icon>mdi-menu</v-icon>
@@ -20,7 +23,7 @@
           <template v-if="!globalState.authenticated">
             <v-btn text href="#features" class="first-nav-button">Features</v-btn>
             <v-btn text href="#pricing">Pricing</v-btn>
-            <v-btn text href="#aboutus">About Us - Added by Janusz</v-btn>
+            <!--<v-btn text href="#aboutus">About Us - Added by Janusz</v-btn>-->
           </template>
           <template v-else>
             <v-btn text :class="[getButtonClass('InputExpenses'), 'first-middle-nav-button']" to="/input_expenses">Input Expenses</v-btn>
@@ -30,7 +33,7 @@
       </v-col>
 
       <!-- Right-most Column -->
-      <v-col cols="4" sm="5" class="d-flex justify-center align-center">
+      <v-col cols="3" sm="3" class="d-flex justify-end align-center">
         <template v-if="!globalState.authenticated">
           <v-btn text to="/login" class="mr-1">Log In</v-btn>
           <v-btn outlined to="/signup" class="mr-4">Sign Up</v-btn>
@@ -62,6 +65,13 @@
           </v-btn>
         </template>
       </v-col>
+      <!--spacer column-->
+      <v-col cols="2" sm="2" class="d-flex justify-end align-center">
+        <v-toolbar-title>
+          <!-- <v-img :src="placeholder-logo.png" @click="$router.push('/')" class="clickable"></v-img>-->
+        </v-toolbar-title>
+      </v-col>
+
     </v-row>
   </v-app-bar>
 </template>

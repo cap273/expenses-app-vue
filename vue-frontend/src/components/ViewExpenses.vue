@@ -9,14 +9,47 @@
             <v-btn value="lifetime">Lifetime</v-btn>
           </v-btn-toggle>
 
-            <!-- Bar Chart -->
-            <div class="chart-wrapper" v-if="chartData && chartData.labels && chartData.labels.length > 0">
-              <BarChart :data="chartData" :options="chartOptions" />
+                <!-- Settings Icon and Menu -->
+      <div class="chart-settings">
+        <v-menu
+          offset-y
+          v-model="isChartMenuOpen"
+          location="bottom end"
+        >
+          <template v-slot:activator="{props }">
+            <v-btn
+              icon
+              v-bind="props"
+              v-on="on"
+            >
+              <v-icon>mdi-cog</v-icon>
+            </v-btn>
+          </template>
+          <v-list>
+            <v-list-item
+              v-for="type in chartTypes"
+              :key="type.value"
+              @click="changeChartType(type.value)"
+            >
+              <v-list-item-title>{{ type.text }}</v-list-item-title>
+            </v-list-item>
+          </v-list>
+        </v-menu>
+      </div>
+
+            <!-- Charts -->
+            <div class="chart-wrapper" v-if="hasChartData">
+              <!-- Render the chart based on the selectedChartType -->
+              <component
+                :is="currentChartComponent"
+                :data="chartData"
+                :options="chartOptions"
+              />
             </div>
             <!-- Optional: Display a message when there's no data -->
             <div v-else class="no-data-message">
               <p>No expenses to display for the selected time period.</p>
-          </div>
+            </div>
 
         </div>
 
@@ -111,12 +144,20 @@
 
 <style scoped>
 .chart-container {
+  position: relative;
   margin-bottom: 20px;
+}
+
+.chart-settings {
+  position: absolute;
+  top: 0;
+  right: 0;
 }
 
 .chart-wrapper {
   position: relative;
   height: 400px; /* Adjust height as needed */
+  margin-top: 40px; /* Add margin to prevent overlap with settings icon */
 }
 
 .mb-5 {
@@ -130,19 +171,41 @@
 
 
 <script>
-import { ref, onMounted, watch, computed } from 'vue';
+import { ref, onMounted, watch, computed, defineComponent, h } from 'vue';
 import InputExpenses from './InputExpenses.vue';
 //adding charts for expenses
-import { Bar } from 'vue-chartjs';
-import { Chart, registerables } from 'chart.js';
+import { Bar, Pie, Chart } from 'vue-chartjs';
+import { Chart as ChartJS, registerables } from 'chart.js';
+import { SankeyController, Flow } from 'chartjs-chart-sankey';
 
 //charts
-Chart.register(...registerables);
+ChartJS.register(...registerables);
+// Register Sankey chart components
+ChartJS.register(SankeyController, Flow);
+
+// Define SankeyChart component
+const SankeyChart = defineComponent({
+  name: 'SankeyChart',
+  props: {
+    data: Object,
+    options: Object,
+  },
+  setup(props) {
+    return () =>
+      h(Chart, {
+        type: 'sankey',
+        data: props.data,
+        options: props.options,
+      });
+  },
+});
 
 export default {
   components: {
     InputExpenses,
     BarChart: Bar,
+    PieChart: Pie,
+    SankeyChart,
   },
   setup() {
     const loading = ref(true);
@@ -263,16 +326,88 @@ export default {
 
     //new chart capability
     const selectedTimePeriod = ref('month'); // Default to current month
+    const isChartMenuOpen = ref(false);
+    const hasChartData = computed(() => {
+  if (selectedChartType.value === 'sankey') {
+    return (
+      chartData.value &&
+      chartData.value.datasets &&
+      chartData.value.datasets[0] &&
+      chartData.value.datasets[0].data &&
+      chartData.value.datasets[0].data.length > 0
+    );
+  } else {
+    return (
+      chartData.value &&
+      chartData.value.labels &&
+      chartData.value.labels.length > 0
+    );
+  }
+});
 
-        const chartOptions = {
+
+        // Chart Type Selection
+        const chartTypes = ref([
+      { text: 'Bar Chart', value: 'bar' },
+      { text: 'Pie Chart', value: 'pie' },
+      { text: 'Sankey Diagram', value: 'sankey' },
+    ]);
+
+    const selectedChartType = ref('bar'); // Default chart type
+
+    const changeChartType = (type) => {
+      selectedChartType.value = type;
+      isChartMenuOpen.value = false;
+    };
+
+        // Determine which chart component to render
+        const currentChartComponent = computed(() => {
+      if (selectedChartType.value === 'bar') {
+        return 'BarChart';
+      } else if (selectedChartType.value === 'pie') {
+        return 'PieChart';
+      } else if (selectedChartType.value === 'sankey') {
+        return 'SankeyChart'; 
+      }
+      return 'BarChart';
+    });
+
+    const chartOptions = computed(() => {
+      if (selectedChartType.value === 'sankey') {
+        return {
           responsive: true,
           maintainAspectRatio: false,
           plugins: {
-            legend: {
-              display: false,
+            tooltip: {
+              callbacks: {
+                label: function (context) {
+                  const label = context.dataset.label || '';
+                  const value = context.raw.weight || 0;
+                  return `${label}: ${value}`;
+                },
+              },
+            },
+          },
+          scales: {
+            x: {
+              stacked: true,
+            },
+            y: {
+              stacked: true,
             },
           },
         };
+      }
+      return {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            display: selectedChartType.value !== 'bar',
+          },
+        },
+      };
+    });
 
               const chartData = computed(() => {
         // Process expenses based on selectedTimePeriod
@@ -292,39 +427,75 @@ export default {
           return false;
         });
 
+        if (selectedChartType.value === 'sankey') {
+        // Prepare data for Sankey Diagram
+        const sankeyData = [];
+        filteredExpenses.forEach((expense) => {
+          const source = expense.PersonName || 'Unknown';
+          const target = expense.ExpenseCategory || 'Uncategorized';
+          let amount = 0;
+            if (expense.Amount) {
+              const amountString = expense.Amount.toString();
+              // Remove any non-numeric characters except for decimal points and minus signs
+              amount = parseFloat(amountString.replace(/[^0-9.-]+/g, ""));
+            }
+
+          sankeyData.push({
+            from: source,
+            to: target,
+            flow: amount,
+          });
+        });
+
+        return {
+          datasets: [
+            {
+              label: 'Expense Flows',
+              data: sankeyData,
+              colorFrom: 'blue',
+              colorTo: 'green',
+              colorMode: 'gradient',
+            },
+          ],
+        };
+      } else {
         // Aggregate expenses by category
         const categoryTotals = {};
 
-        filteredExpenses.forEach(expense => {
-        const category = expense.ExpenseCategory || 'Uncategorized';
-        let amount = 0;
+        filteredExpenses.forEach((expense) => {
+          const category = expense.ExpenseCategory || 'Uncategorized';
+          let amount = 0;
+          if (expense.Amount) {
+            const amountString = expense.Amount.toString();
+            // Remove any non-numeric characters except for decimal points and minus signs
+            amount = parseFloat(amountString.replace(/[^0-9.-]+/g, ""));
+          }
 
-        if (expense.Amount) {
-          const amountString = expense.Amount.toString();
-          amount = parseFloat(amountString.replace(/[^0-9.-]+/g, ""));
-        }
-
-        if (!categoryTotals[category]) {
-          categoryTotals[category] = 0;
-        }
-        categoryTotals[category] += amount;
-      });
+          if (!categoryTotals[category]) {
+            categoryTotals[category] = 0;
+          }
+          categoryTotals[category] += amount;
+        });
 
         const labels = Object.keys(categoryTotals);
         const data = Object.values(categoryTotals);
 
-        // Ensure that labels and datasets are always arrays
         return {
           labels: labels.length > 0 ? labels : ['No Data'],
           datasets: [
             {
               label: 'Total Expenses',
               data: data.length > 0 ? data : [0],
-              backgroundColor: labels.length > 0 ? generateColors(labels.length) : ['#CCCCCC'],
+              backgroundColor:
+                labels.length > 0
+                  ? generateColors(labels.length)
+                  : ['#CCCCCC'],
             },
           ],
         };
-      });
+      }
+    });
+        
 
 
         // Function to generate colors for the chart
@@ -357,6 +528,12 @@ export default {
       tableOptions,
       updateTableOptions,
       processedExpenses,
+      isChartMenuOpen,
+      chartTypes,
+      selectedChartType,
+      changeChartType,
+      currentChartComponent,
+      hasChartData,
     };
   },
 };

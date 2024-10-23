@@ -10,6 +10,7 @@
   "dependencies": {
     "@mdi/font": "^7.4.47",
     "chart.js": "^4.4.5",
+    "chartjs-chart-sankey": "^0.13.0",
     "plaid": "^28.0.0",
     "roboto-fontface": "*",
     "vue": "^3.4.15",

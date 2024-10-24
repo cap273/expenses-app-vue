@@ -1,5 +1,5 @@
 <template>
-    <v-container>
+    <v-container class="rounded-box-embed">
         <h2 class="expenses-header text-center">Input New Expenses</h2>
 
         <!-- Response Message -->
@@ -416,13 +416,10 @@ export default {
   margin-bottom: 20px;
 }
 
-.button-row {
-  margin-top: 20px;
-}
-
 .tight-table {
   table-layout: fixed;
   width: 100%;
+  border-radius: 12px; /* Rounded corners */
 }
 
 .text-success {
@@ -431,6 +428,40 @@ export default {
 
 .text-error {
     color: red;
+}
+
+/* Reduce the padding for table cells to tighten spacing */
+.tight-table th,
+.tight-table td {
+  padding: 4px 8px !important; /* Reduce padding inside cells */
+}
+
+/* Compact the input fields */
+.input-field {
+  margin: 0; /* Remove margin around input fields */
+  padding: 4px 8px; /* Reduce padding inside the fields */
+}
+
+/* Reduce the height of text fields and selects */
+.v-text-field,
+.v-select {
+  padding-right: 0;
+  padding-left: 0; /* Remove default padding */
+}
+
+/* Adjusting the button to reduce spacing */
+.button-row {
+  margin-top: 10px; /* Reduce top margin for buttons */
+}
+
+
+/* New class for rounded boxes with light background */
+.rounded-box-embed {
+  background-color: #ffffffe3; /* Light grey background for boxes */
+  border-radius: 12px; /* Rounded corners */
+  padding: 20px;
+  margin-bottom: 20px; /* Space between boxes */
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Optional shadow for a subtle 3D effect */
 }
 
 </style>

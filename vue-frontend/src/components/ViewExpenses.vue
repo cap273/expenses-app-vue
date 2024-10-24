@@ -11,9 +11,13 @@
             <v-btn
               color="primary"
               @click="toggleAddExpense"
-              icon="mdi-plus"
-              class="mr-2"
-            ></v-btn>
+              class="mr-2 circle-btn"
+              width="0"
+            >
+              <v-icon :class="{'rotate-icon': showAddExpense}">
+                  mdi-plus
+                </v-icon>
+            </v-btn>
             <v-text-field
               v-model="search"
               label="Search"
@@ -144,6 +148,24 @@
   padding: 20px;
   margin-bottom: 20px; /* Space between boxes */
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Optional shadow for a subtle 3D effect */
+}
+
+.v-icon {
+  transition: transform 0.3s ease; /* Apply transition to all rotations */
+}
+
+/* Rotate icon when the form is toggled open */
+.rotate-icon {
+  transform: rotate(135deg); /* Rotate 45 degrees */
+}
+
+/* Circular button styling */
+.circle-btn {
+  height: 64px;
+  border-radius: 50%; /* Make the button round */
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 </style>

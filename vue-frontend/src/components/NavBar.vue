@@ -23,9 +23,11 @@
            -->
         </template>
         <template v-else>
+            <!-- 
           <v-list-item link to="/input_expenses">
-            <v-list-item-title>Input Expenses</v-list-item-title>
+                        <v-list-item-title>Input Expenses</v-list-item-title>
           </v-list-item>
+            -->
           <v-list-item link to="/view_expenses">
             <v-list-item-title>View Expenses</v-list-item-title>
           </v-list-item>
@@ -64,11 +66,13 @@
             <v-btn text href="#pricing">Pricing</v-btn>
           </template>
           <template v-else>
-            <v-btn
+            <!-- 
+              <v-btn
               text
               :class="[getButtonClass('InputExpenses'), 'first-middle-nav-button']"
               to="/input_expenses"
             >Input Expenses</v-btn>
+            -->
             <v-btn
               text
               :class="getButtonClass('ViewExpenses')"

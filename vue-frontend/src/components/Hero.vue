@@ -9,10 +9,10 @@
       >
         <div class="text-content">
           <h1 class="display-1 hero-header">
-            Where did all your money go?
+            Simple, big picture, expense tracking
           </h1>
           <p class="subtitle-1 hero-paragraph">
-            Get insights into your expenses, and how much you spend on your next trip.
+            Get insights into your expenses and find out how much you can spend on that next vacation.
           </p>
           <v-btn
             large

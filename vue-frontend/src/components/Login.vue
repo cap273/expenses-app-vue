@@ -75,7 +75,7 @@ export default {
         if (data.authenticated) {
           globalState.authenticated = true;
           globalState.username = data.username;
-          this.$router.push('/input_expenses'); // Redirect to Input Expenses page
+          this.$router.push('/view_expenses'); // Redirect to View Expenses page
         } else {
           this.errorMessage = data.error || 'Authentication failed';
         }

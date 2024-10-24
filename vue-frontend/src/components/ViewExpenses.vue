@@ -1,71 +1,75 @@
 <template>
-  <v-container>
-       <!-- Chart Component -->
-    <expense-chart :expenses="expenses" />
+  <div class="page-background">
+    <v-container>
+        <!-- Chart Component -->
+          <div class="rounded-box">
+      <expense-chart :expenses="expenses" />
+          </div>
 
-        <div class="search-add-container">
-      <v-btn
-        color="primary"
-        @click="toggleAddExpense"
-        icon="mdi-plus"
-        class="mr-2"
-      ></v-btn>
-      <v-text-field
-        v-model="search"
-        label="Search"
-        class="search-bar"
-        outlined
-        dense
-        hide-details="auto"
-        style="margin-bottom:0; margin-left:20px"
-      ></v-text-field>
-        <!-- Action Buttons -->
-        <v-btn color="red" style="margin-left:20px;" @click="deleteSelectedExpenses" 
-      v-if="selected.length > 0">
-        <v-icon left>mdi-trash-can</v-icon>
-         
-      </v-btn> 
-    </div>
+        <div class="rounded-box">
+          <div class="search-add-container">
+            <v-btn
+              color="primary"
+              @click="toggleAddExpense"
+              icon="mdi-plus"
+              class="mr-2"
+            ></v-btn>
+            <v-text-field
+              v-model="search"
+              label="Search"
+              class="search-bar"
+              outlined
+              dense
+              hide-details="auto"
+              style="margin-bottom:0; margin-left:20px"
+            ></v-text-field>
+          <!-- Action Buttons -->
+            <v-btn color="red" style="margin-left:20px;" @click="deleteSelectedExpenses" 
+          v-if="selected.length > 0">
+            <v-icon left>mdi-trash-can</v-icon>
+            </v-btn> 
+          </div>
+          
+          <!-- Add Expense Form -->
+          <div v-if="showAddExpense">
+            <input-expenses @update-expenses="handleUpdateExpenses" />
+          </div>
 
-      <!-- Add Expense Form -->
-    <div v-if="showAddExpense">
-      <input-expenses @update-expenses="handleUpdateExpenses" />
-    </div>
+          <!-- Loading Screen -->
+          <div v-if="loading" class="text-center">
+            <v-progress-circular indeterminate></v-progress-circular>
+          </div>
 
-      <!-- Loading Screen -->
-      <div v-if="loading" class="text-center">
-        <v-progress-circular indeterminate></v-progress-circular>
-      </div>
+          <v-data-table
+            :headers="headers"
+            :items="processedExpenses"
+            :search="search"
+            class="elevation-1"
+            item-value="ExpenseID"
+            density="compact"
+            :no-data-text="'No expenses found'"
+            items-per-page="25"
+            show-select
+            v-model="selected"
+            :options="tableOptions"
+            @update:options="updateTableOptions"
+          >
+            <!-- :group-by="['ExpenseMonth']" -->
 
-            <v-data-table
-        :headers="headers"
-        :items="processedExpenses"
-        :search="search"
-        class="elevation-1"
-        item-value="ExpenseID"
-        density="compact"
-        :no-data-text="'No expenses found'"
-        items-per-page="25"
-        show-select
-        v-model="selected"
-        :options="tableOptions"
-        @update:options="updateTableOptions"
-      >
-        <!-- :group-by="['ExpenseMonth']" -->
+            <!-- Scoped Slot for Expense Date Column -->
+            <template v-slot:item.ExpenseDate="{ item }">
+              {{ formatDate(item.ExpenseDate) }}
+            </template>
 
-        <!-- Scoped Slot for Expense Date Column -->
-        <template v-slot:item.ExpenseDate="{ item }">
-          {{ formatDate(item.ExpenseDate) }}
-        </template>
-
-        <!-- Scoped Slot for Actions Column -->
-        <template v-slot:item.actions="{ item }">
-          <v-btn color="blue" @click="editExpense(item)">
-            <v-icon left>mdi-pencil</v-icon>
-            Edit
-          </v-btn>
-        </template>
-      </v-data-table>
+            <!-- Scoped Slot for Actions Column -->
+            <template v-slot:item.actions="{ item }">
+              <v-btn color="blue" @click="editExpense(item)">
+                <v-icon left>mdi-pencil</v-icon>
+                Edit
+              </v-btn>
+            </template>
+          </v-data-table>
+        </div>
 
         <!-- Edit Expense Dialog -->
         <v-dialog v-model="isEditDialogOpen" max-width="1200px">
@@ -87,9 +91,8 @@
             </v-card>
           </template>
         </v-dialog>
-      
-
-  </v-container>
+    </v-container>
+  </div>
 </template>
 
 <style scoped>
@@ -127,6 +130,22 @@
 .mb-2 {
   margin-bottom: 16px;
 }
+
+.page-background {
+  background-color: #e0e0e0; /* Slightly darker grey background */
+  min-height: 100vh; /* Ensure the container covers the full viewport height */
+  padding: 20px; /* Add some padding for breathing room */
+}
+
+/* New class for rounded boxes with light background */
+.rounded-box {
+  background-color: #f5f5f5; /* Light grey background for boxes */
+  border-radius: 12px; /* Rounded corners */
+  padding: 20px;
+  margin-bottom: 20px; /* Space between boxes */
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Optional shadow for a subtle 3D effect */
+}
+
 </style>
 
 

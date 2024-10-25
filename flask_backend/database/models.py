@@ -16,26 +16,20 @@ class Category(db.Model):
     LastUpdated = db.Column(db.Date)
 
 
+# Modify Expense model
 class Expense(db.Model):
     __tablename__ = "expenses"
 
     ExpenseID = db.Column(db.Integer, primary_key=True)
-    AccountID = db.Column(
-        db.Integer, db.ForeignKey("accounts.AccountID"), nullable=False
-    )
-    ExpenseScope = db.Column(
-        db.String(255)
-    )  # Either 'Joint' or the name of an individual
-    PersonID = db.Column(
-        db.Integer, db.ForeignKey("persons.PersonID"), nullable=True
-    )  # NULL if it's a joint expense
+    ScopeID = db.Column(db.Integer, db.ForeignKey("scopes.ScopeID"), nullable=False)  # Changed from AccountID
+    PersonID = db.Column(db.Integer, db.ForeignKey("persons.PersonID"), nullable=True)
     Day = db.Column(db.Integer, nullable=False)
     Month = db.Column(db.String(50), nullable=False)
     Year = db.Column(db.Integer, nullable=False)
     ExpenseDate = db.Column(db.Date, nullable=False)
     ExpenseDayOfWeek = db.Column(db.String(50))
     Amount = db.Column(db.Float, nullable=False)
-    AdjustedAmount = db.Column(db.Float)  # Amount after adjustments
+    AdjustedAmount = db.Column(db.Float)
     ExpenseCategory = db.Column(db.String(255), nullable=False)
     AdditionalNotes = db.Column(db.String(255))
     CreateDate = db.Column(db.Date)
@@ -86,3 +80,25 @@ class Person(db.Model):
         which can be easily converted to a JSON object.
         """
         return {"PersonID": self.PersonID, "PersonName": self.PersonName}
+
+class Scope(db.Model):
+    __tablename__ = "scopes"
+    __table_args__ = {"implicit_returning": False}
+
+    ScopeID = db.Column(db.Integer, primary_key=True)
+    ScopeName = db.Column(db.String(255), nullable=False)
+    ScopeType = db.Column(db.String(50), nullable=False)  # 'personal' or 'household'
+    CreateDate = db.Column(db.Date)
+    LastUpdated = db.Column(db.Date)
+
+class ScopeAccess(db.Model):
+    __tablename__ = "scope_access"
+    __table_args__ = {"implicit_returning": False}
+
+    AccessID = db.Column(db.Integer, primary_key=True)
+    ScopeID = db.Column(db.Integer, db.ForeignKey("scopes.ScopeID"), nullable=False)
+    AccountID = db.Column(db.Integer, db.ForeignKey("accounts.AccountID"), nullable=False)
+    AccessType = db.Column(db.String(50), nullable=False)  # 'owner' or 'member'
+    InviteStatus = db.Column(db.String(50), nullable=False)  # 'pending', 'accepted', 'rejected'
+    CreateDate = db.Column(db.Date)
+    LastUpdated = db.Column(db.Date)

@@ -5,6 +5,7 @@ import SignUpWithLogin from '@/views/SignUpWithLogin.vue';
 import InputExpenses from './components/InputExpenses.vue';
 import ViewExpenses from './components/ViewExpenses.vue';
 import Profile from '@/components/Profile.vue';
+import HouseholdSettings from '@/components/HouseholdSettings.vue';
 
 const routes = [
   {
@@ -43,13 +44,17 @@ const routes = [
     component: Profile,
     meta: { requiresAuth: true },
   },
+  {
+    path: '/household',
+    name: 'HouseholdSettings',
+    component: HouseholdSettings,
+    meta: { requiresAuth: true },
+  },
 ];
 
 const router = createRouter({
   history: createWebHistory(),
   routes,
 });
-
-
 
 export default router;

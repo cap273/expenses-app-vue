@@ -22,14 +22,15 @@
           </v-list-item>
            -->
         </template>
-        <template v-else>
-            <!-- 
-          <v-list-item link to="/input_expenses">
-                        <v-list-item-title>Input Expenses</v-list-item-title>
-          </v-list-item>
-            -->
+          <template v-else>
           <v-list-item link to="/view_expenses">
             <v-list-item-title>View Expenses</v-list-item-title>
+          </v-list-item>
+          <v-list-item link to="/household">
+            <v-list-item-title>
+              <v-icon left>mdi-home-account</v-icon>
+              Household Settings
+            </v-list-item-title>
           </v-list-item>
           <v-list-item @click="logout">
             <v-list-item-title>Log Out</v-list-item-title>
@@ -109,6 +110,12 @@
                 <v-list>
                   <v-list-item link :to="{ name: 'Profile' }">
                     <v-list-item-title>Profile</v-list-item-title>
+                  </v-list-item>
+                  <v-list-item link :to="{ name: 'HouseholdSettings' }">
+                    <v-list-item-title>
+                      <v-icon left>mdi-home-account</v-icon>
+                      Household Settings
+                    </v-list-item-title>
                   </v-list-item>
                   <v-list-item @click="logout">
                     <v-list-item-title>Log Out</v-list-item-title>

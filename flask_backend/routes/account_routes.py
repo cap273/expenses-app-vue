@@ -7,7 +7,7 @@ from flask_login import current_user
 from werkzeug.exceptions import BadRequestKeyError
 
 from flask_backend.utils.session import login_and_update_last_login, login_required_api
-from flask_backend.database.models import db, Account, Person
+from flask_backend.database.models import db, Account, Person, Scope, ScopeAccess
 
 account_routes = Blueprint("account_routes", __name__)
 
@@ -68,12 +68,37 @@ def create_account():
                 # Add new user to database
                 db.session.add(new_user)
                 db.session.commit()
+                db.session.flush()  # Flush to get the new user's ID
 
                 # Create a new Person instance associated with this account
                 new_person = Person(AccountID=new_user.id, PersonName=username)
 
                 # Add new person to database
                 db.session.add(new_person)
+                db.session.commit()
+
+                # Create personal scope for the new account
+                personal_scope = Scope(
+                    ScopeName=f"{username}'s Personal",
+                    ScopeType='personal',
+                    CreateDate=datetime.now().date(),
+                    LastUpdated=datetime.now().date()
+                )
+                db.session.add(personal_scope)
+                db.session.flush()  # Flush to get the scope ID
+
+                # Create scope access record
+                scope_access = ScopeAccess(
+                    ScopeID=personal_scope.ScopeID,
+                    AccountID=new_user.id,
+                    AccessType='owner',
+                    InviteStatus='accepted',
+                    CreateDate=datetime.now().date(),
+                    LastUpdated=datetime.now().date()
+                )
+                db.session.add(scope_access)
+
+                # Commit all changes
                 db.session.commit()
 
                 # Authenticate and login the new user

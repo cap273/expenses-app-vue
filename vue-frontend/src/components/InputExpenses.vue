@@ -11,7 +11,7 @@
             <v-table dense class="elevation-1 tight-table">
                 <thead>
                 <tr>
-                    <th class="column-scope">Expense Scope</th>
+                    <th class="column-scope">Scope</th>
                     <th class="column-day">Day</th>
                     <th class="column-month">Month</th>
                     <th class="column-year">Year</th>
@@ -25,12 +25,15 @@
                 <tr v-for="(expense, index) in expenses" :key="`row-${index}-${expense.rowKey}`">
                     <!-- Expense Scope Dropdown -->
                     <td>
-                    <v-select
+                        <v-select
                         v-model="expense.scope"
                         :items="scopes"
+                        item-title="name"
+                        item-value="id"
+                        label="Select Scope"
                         :rules="[rules.scope]"
                         class="input-field input-field--scope"
-                    ></v-select>
+                        ></v-select>
                     </td>
                     <!-- Day Field -->
                     <td>
@@ -138,7 +141,7 @@ export default {
 
         // Data structure to map names of people to that person's ID, according
         // to the backend server
-        const nameToIdMap = ref({});
+       // const nameToIdMap = ref({});
 
         // Stores the response message and its type
         const responseMessage = ref({ message: '', type: '' });
@@ -161,7 +164,7 @@ export default {
         if (newVal) {
             console.log('Received expenseData:', newVal);
           expenses.value = [{
-            scope: newVal.PersonName || '',
+            scope: newVal.ScopeID || '',
             day: newVal.Day || '',
             month: newVal.Month || '',
             year: newVal.Year || '',
@@ -190,33 +193,26 @@ export default {
       },
       { immediate: true }
     );
+        // Update fetchScopes to use the new API
         const fetchScopes = async () => {
-            try {
-                const response = await fetch('/api/get_persons');
-                if (!response.ok) {
-                    throw new Error('Network response was not ok');
-                }
-                const data = await response.json(); 
-
-                // Create the mapping from PersonName to PersonID
-                nameToIdMap.value = data.reduce((map, person) => {
-                    map[person.PersonName] = person.PersonID;
-                    return map;
-                }, {});
-
-                // Populate scopes based on the number of persons
-                if (data.length === 1) {
-                    // If there's only one person, use their name
-                    scopes.value = [data[0].PersonName];
-                } else if (data.length > 1) {
-                    // If there are multiple persons, add "Joint" and each person's name
-                    scopes.value = ['Joint', ...data.map(person => person.PersonName)];
-                }
-            } catch (error) {
-                console.error('Error fetching scopes:', error);
-                // Handle error, maybe set scopes to default values or show an error message
+        try {
+            const response = await fetch('/api/get_scopes');
+            if (!response.ok) {
+            throw new Error('Network response was not ok');
             }
+            const data = await response.json();
+            if (data.success) {
+            // Transform scopes data for the dropdown
+            scopes.value = data.scopes.map(scope => ({
+                id: scope.id,
+                name: `${scope.name} (${scope.type})`
+            }));
+            }
+        } catch (error) {
+            console.error('Error fetching scopes:', error);
+        }
         };
+
 
         const fetchCategories = async () => {
             try {
@@ -235,7 +231,7 @@ export default {
         const rules = {
             required: value => !!value || 'Required.',
             scope: value => {
-                return value != null && value.trim() !== '' || 'Scope is required';
+                return value !== null && value !== undefined && value !== '' || 'Scope is required';
             },
             day: value => {
                 if (!value) return 'Day is required';
@@ -260,9 +256,10 @@ export default {
                 return true;
             },
             category: value => {
-                return value != null && value.trim() !== '' || 'Expense Category is required';
+                return value !== null && value !== undefined && value !== '' || 'Expense Category is required';
             },
         };
+
 
         const addRow = () => {
         const lastExpense = expenses.value[expenses.value.length - 1];
@@ -325,7 +322,7 @@ export default {
                 // as the Expense Scope. This avoids having to do this on the backend.
                 const modifiedExpenses = expenses.value.map(expense => ({
                     ...expense,
-                    scope: expense.scope === 'Joint' ? 'Joint' : nameToIdMap.value[expense.scope]
+                    scopeId: expense.scope // scope is already the ID from the v-select
                 }));
 
                 //Defining variables for response

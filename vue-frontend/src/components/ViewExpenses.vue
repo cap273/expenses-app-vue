@@ -58,8 +58,9 @@
             :options="tableOptions"
             @update:options="updateTableOptions"
           >
-            <!-- :group-by="['ExpenseMonth']" -->
-
+            <template v-slot:item.ScopeName="{ item }">
+              {{ item.ScopeName }} ({{ item.ScopeType }})
+            </template>
             <!-- Scoped Slot for Expense Date Column -->
             <template v-slot:item.ExpenseDate="{ item }">
               {{ formatDate(item.ExpenseDate) }}
@@ -187,7 +188,10 @@ export default {
     const search = ref("");
     const expenses = ref([]);
     const headers = ref([
-      { title: 'Scope', align: 'start', value: 'PersonName', sortable: true },
+      { title: 'Scope', align: 'start', value: 'ScopeName', sortable: true,
+        // Add a custom format function to show scope type
+        format: (value, item) => `${value} (${item.ScopeType})`
+      },
       { title: 'Expense Date', value: 'ExpenseDate', sortable: true },
       { title: 'Amount', value: 'Amount' },
       { title: 'Expense Category', value: 'ExpenseCategory', sortable: true },

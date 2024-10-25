@@ -26,12 +26,6 @@
           <v-list-item link to="/view_expenses">
             <v-list-item-title>View Expenses</v-list-item-title>
           </v-list-item>
-          <v-list-item link to="/household">
-            <v-list-item-title>
-              <v-icon left>mdi-home-account</v-icon>
-              Household Settings
-            </v-list-item-title>
-          </v-list-item>
           <v-list-item @click="logout">
             <v-list-item-title>Log Out</v-list-item-title>
           </v-list-item>
@@ -109,7 +103,9 @@
               <v-menu v-if="!isLoggingOut" activator="parent" offset-y>
                 <v-list>
                   <v-list-item link :to="{ name: 'Profile' }">
-                    <v-list-item-title>Profile</v-list-item-title>
+                    <v-list-item-title>
+                      <v-icon left>mdi-account-circle</v-icon>
+                      Profile</v-list-item-title>
                   </v-list-item>
                   <v-list-item link :to="{ name: 'HouseholdSettings' }">
                     <v-list-item-title>
@@ -118,7 +114,9 @@
                     </v-list-item-title>
                   </v-list-item>
                   <v-list-item @click="logout">
-                    <v-list-item-title>Log Out</v-list-item-title>
+                    <v-list-item-title>
+                      <v-icon left>mdi-logout</v-icon>
+                      Log Out</v-list-item-title>
                   </v-list-item>
                 </v-list>
               </v-menu>

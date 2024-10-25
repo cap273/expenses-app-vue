@@ -61,6 +61,7 @@ def auth_status():
                 "authenticated": True,
                 "username": current_user.account_name,
                 "display_name": current_user.display_name,
+                "email": current_user.user_email,  # Add email here
             }
         )
     else:

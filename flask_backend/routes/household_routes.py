@@ -217,3 +217,29 @@ def respond_to_invite():
     except Exception as e:
         db.session.rollback()
         return jsonify({"success": False, "error": str(e)})
+    
+@household_routes.route("/api/get_household_members", methods=["GET"])
+@login_required_api
+def get_household_members():
+    """Get members for a specific household scope"""
+    try:
+        scope_id = request.args.get("scopeId")
+        if not scope_id:
+            return jsonify({"success": False, "error": "Scope ID is required"})
+        
+        members_query = (
+            db.session.query(Account, ScopeAccess)
+            .join(ScopeAccess, Account.id == ScopeAccess.AccountID)
+            .filter(ScopeAccess.ScopeID == scope_id)
+            .all()
+        )
+        
+        members = [{
+            "email": account.user_email,
+            "access_type": access.AccessType
+        } for account, access in members_query]
+        
+        return jsonify({"success": True, "members": members})
+    
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)})

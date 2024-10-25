@@ -1,38 +1,65 @@
 <template>
-    <v-container>
+    <v-container class="household-settings-div">
       <div class="rounded-box">
         <h2 class="text-h5 mb-6">Household Settings</h2>
+
+        <!-- Loader while fetching data -->
+      <v-progress-circular v-if="isLoading" indeterminate color="primary">
+      </v-progress-circular>
         
-        <!-- Current Scopes -->
-        <div class="mb-8">
-          <h3 class="text-h6 mb-4">Your Scopes</h3>
-          <v-card
-            v-for="scope in scopes"
-            :key="scope.id"
-            class="mb-4 pa-4"
-            variant="outlined"
+      <!-- Current Scopes -->
+      <div class="mb-8">
+        <h3 class="text-h6 mb-4">Your Scopes</h3>
+        <v-card
+          v-for="scope in scopes"
+          :key="scope.id"
+          class="mb-4 pa-4 scope-card"
+          variant="outlined"
+        >
+          <!-- Invite Member button at the top right -->
+          <v-btn
+            v-if="scope.type === 'household' && scope.access_type === 'owner'"
+            color="primary"
+            @click="showInviteModal(scope.id)"
+            prepend-icon="mdi-account-plus"
+            class="invite-btn"
+            small
           >
-            <div class="d-flex justify-space-between align-center">
-              <div>
-                <div class="text-h6">{{ scope.name }}</div>
-                <div class="text-body-2 text-grey">
-                  Type: {{ scope.type === 'household' ? 'Household' : 'Personal' }}
-                </div>
-                <div class="text-body-2 text-grey">
-                  Access: {{ scope.access_type === 'owner' ? 'Owner' : 'Member' }}
-                </div>
-              </div>
-              <v-btn
-                v-if="scope.type === 'household' && scope.access_type === 'owner'"
-                color="primary"
-                @click="showInviteModal(scope.id)"
-                prepend-icon="mdi-account-plus"
-              >
-                Invite Member
-              </v-btn>
+            Invite Member
+          </v-btn>
+
+          <div class="d-flex flex-column">
+            <div class="text-h6">{{ scope.name }}</div>
+            <div class="text-body-2 text-grey">
+              Type: {{ scope.type === 'household' ? 'Household' : 'Personal' }}
             </div>
-          </v-card>
-        </div>
+            <div class="text-body-2 text-grey">
+              Access: {{ scope.access_type === 'owner' ? 'Owner' : 'Member' }}
+            </div>
+
+            <!-- Display household members -->
+            <div v-if="scope.members && scope.members.length > 0">
+              <h4 class="text-subtitle-1 mt-4 mb-2">Members</h4>
+              <div class="member-chips">
+                <v-chip
+                  v-for="member in scope.members"
+                  :key="member.email"
+                  class="ma-2 member-chip"
+                  outlined
+                  color="primary"
+                  large
+                >
+                  <v-avatar left>{{ member.email[0].toUpperCase() }}</v-avatar>
+                  <span class="font-weight-bold">{{ member.email }}</span>
+                  <v-icon right size="18px" style="margin-left:10px">
+                    {{ member.access_type === 'owner' ? 'mdi-crown' : 'mdi-account' }}
+                  </v-icon>
+                </v-chip>
+              </div>
+            </div>
+          </div>
+        </v-card>
+      </div>
   
         <!-- Create New Household -->
         <div class="mb-8">
@@ -142,6 +169,7 @@
         isCreating: false,
         isSending: false,
         isResponding: null,
+        isLoading: true, // Add loading state
       }
     },
     mounted() {
@@ -154,12 +182,27 @@
                 const response = await fetch('/api/get_scopes')
                 const data = await response.json()
                 if (data.success) {
-                this.scopes = data.scopes
+                this.scopes = data.scopes;
+                // Fetch members for each scope
+                for (const scope of this.scopes) {
+                        if (scope.type === 'household') {
+                            const memberResponse = await fetch(`/api/get_household_members?scopeId=${scope.id}`);
+                            const memberData = await memberResponse.json();
+                            if (memberData.success) {
+                                scope.members = memberData.members;
+                            } else {
+                                scope.members = [];
+                            }
+                        }
+                    }
                 } else {
                 console.error('Error fetching scopes:', data.error)
                 }
             } catch (error) {
                 console.error('Error fetching scopes:', error)
+            }
+            finally {
+                this.isLoading = false;
             }
             },
             async fetchPendingInvites() {
@@ -292,4 +335,34 @@
   .gap-2 {
     gap: 8px;
   }
+
+  /* Invite button absolute positioning */
+.scope-card {
+  position: relative;
+}
+
+.invite-btn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+}
+
+/* Member chips layout */
+.member-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.member-chip {
+  padding: 24px 24px; /* Add more padding to make it roomier */
+}
+
+.ma-2 {
+  margin: 8px;
+}
+
+.household-settings-div {
+    max-width: 750px;
+}
   </style>

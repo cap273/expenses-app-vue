@@ -20,6 +20,7 @@ export const globalState = reactive({
   authenticated: false,
   username: null,
   display_name: null,
+  user_email: null, // Add user_email here
   isDrawerOpen: false // Reactive state for the navigation drawer
 });
 
@@ -34,10 +35,16 @@ fetch('/api/auth/status')
         globalState.authenticated = true;
         globalState.username = data.username;
         globalState.display_name = data.display_name;
+        globalState.user_email = data.email;
+                
+        // Debug log to check values
+        console.log('Auth Status Response:', data);
+        console.log('Global State:', globalState);
     } else {
         globalState.authenticated = false;
         globalState.username = null;
         globalState.display_name = null;
+        globalState.user_email = null;
     }
   });
 

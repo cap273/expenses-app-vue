@@ -4,62 +4,101 @@
         <h2 class="text-h5 mb-6">Household Settings</h2>
 
         <!-- Loader while fetching data -->
-      <v-progress-circular v-if="isLoading" indeterminate color="primary">
-      </v-progress-circular>
+        <v-progress-circular v-if="isLoading" indeterminate color="primary">
+        </v-progress-circular>
         
-      <!-- Current Scopes -->
-      <div class="mb-8">
-        <h3 class="text-h6 mb-4">Your Scopes</h3>
-        <v-card
-          v-for="scope in scopes"
-          :key="scope.id"
-          class="mb-4 pa-4 scope-card"
-          variant="outlined"
-        >
-          <!-- Invite Member button at the top right -->
-          <v-btn
-            v-if="scope.type === 'household' && scope.access_type === 'owner'"
-            color="primary"
-            @click="showInviteModal(scope.id)"
-            prepend-icon="mdi-account-plus"
-            class="invite-btn"
-            small
+        <!-- Current Scopes -->
+        <div class="mb-8">
+          <h3 class="text-h6 mb-4">Your Scopes</h3>
+          <v-card
+            v-for="scope in scopes"
+            :key="scope.id"
+            class="mb-4 pa-4 scope-card"
+            variant="outlined"
           >
-            Invite Member
-          </v-btn>
+            <!-- Scope Actions Menu -->
+            <div class="scope-actions">
+                <div class="action-buttons">
+                    <v-btn
+                        v-if="scope.type === 'household' && scope.access_type === 'owner'"
+                        color="primary"
+                        @click="showInviteModal(scope.id)"
+                        prepend-icon="mdi-account-plus"
+                        class="me-2"
+                        small
+                        >
+                        Invite Member
+                        </v-btn>
+                        
+                        <v-btn
+                        v-if="scope.type === 'household'"
+                        :color="scope.access_type === 'owner' ? 'error' : 'warning'"
+                        @click="showScopeActionDialog(scope)"
+                        small
+                        :prepend-icon="scope.access_type === 'owner' ? 'mdi-delete' : 'mdi-exit-run'"
+                        >
+                        {{ scope.access_type === 'owner' ? 'Delete Household' : 'Leave Household' }}
+                        </v-btn>
+                    </div>
+                </div>
 
-          <div class="d-flex flex-column">
-            <div class="text-h6">{{ scope.name }}</div>
-            <div class="text-body-2 text-grey">
-              Type: {{ scope.type === 'household' ? 'Household' : 'Personal' }}
-            </div>
-            <div class="text-body-2 text-grey">
-              Access: {{ scope.access_type === 'owner' ? 'Owner' : 'Member' }}
-            </div>
+            <div class="d-flex flex-column">
+              <div class="text-h6">{{ scope.name }}</div>
+              <div class="text-body-2 text-grey">
+                Type: {{ scope.type === 'household' ? 'Household' : 'Personal' }}
+              </div>
+              <div class="text-body-2 text-grey">
+                Access: {{ scope.access_type === 'owner' ? 'Owner' : 'Member' }}
+              </div>
 
-            <!-- Display household members -->
-            <div v-if="scope.members && scope.members.length > 0">
-              <h4 class="text-subtitle-1 mt-4 mb-2">Members</h4>
-              <div class="member-chips">
-                <v-chip
-                  v-for="member in scope.members"
-                  :key="member.email"
-                  class="ma-2 member-chip"
-                  outlined
-                  color="primary"
-                  large
-                >
-                  <v-avatar left>{{ member.email[0].toUpperCase() }}</v-avatar>
-                  <span class="font-weight-bold">{{ member.email }}</span>
-                  <v-icon right size="18px" style="margin-left:10px">
-                    {{ member.access_type === 'owner' ? 'mdi-crown' : 'mdi-account' }}
-                  </v-icon>
-                </v-chip>
+              <!-- Display household members -->
+              <div v-if="scope.members && scope.members.length > 0">
+                <h4 class="text-subtitle-1 mt-4 mb-2">Members</h4>
+                <div class="member-chips">
+                    <v-chip
+                    v-for="member in scope.members"
+                    :key="member.email"
+                    class="ma-2 member-chip"
+                    outlined
+                    :color="member.invite_status === 'pending' ? 'grey' : 'primary'"
+                    large
+                    >
+                    <v-avatar left>{{ member.email[0].toUpperCase() }}</v-avatar>
+                    <span class="font-weight-bold">{{ member.email }}</span>
+                    
+                    <!-- Status icons -->
+                    <v-tooltip bottom>
+                        <template v-slot:activator="{ on, attrs }">
+                        <v-icon 
+                            right 
+                            size="18px" 
+                            style="margin-left:10px"
+                            v-bind="attrs"
+                            v-on="on"
+                        >
+                            {{ getMemberIcon(member) }}
+                        </v-icon>
+                        </template>
+                        <span>{{ getMemberStatus(member) }}</span>
+                    </v-tooltip>
+
+                    <!-- Remove member button for owners -->
+                    <v-icon
+                        v-if="scope.access_type === 'owner' && member.access_type !== 'owner'"
+                        right
+                        size="18px"
+                        color="error"
+                        style="margin-left:10px; cursor: pointer;"
+                        @click.stop="showRemoveMemberDialog(scope.id, member.email)"
+                    >
+                        mdi-account-remove
+                    </v-icon>
+                    </v-chip>
+                </div>
               </div>
             </div>
-          </div>
-        </v-card>
-      </div>
+          </v-card>
+        
   
         <!-- Create New Household -->
         <div class="mb-8">
@@ -152,6 +191,58 @@
           </v-card-actions>
         </v-card>
       </v-dialog>
+
+    <!-- Remove Member Dialog -->
+     <v-dialog v-model="showingRemoveMemberDialog" max-width="400px">
+          <v-card>
+            <v-card-title class="text-h5">Remove Member</v-card-title>
+            <v-card-text>
+              Are you sure you want to remove {{ memberToRemove.email }} from this household?
+            </v-card-text>
+            <v-card-actions>
+              <v-spacer></v-spacer>
+              <v-btn color="grey" text @click="closeRemoveMemberDialog">Cancel</v-btn>
+              <v-btn
+                color="error"
+                @click="removeMember"
+                :loading="isRemoving"
+              >
+                Remove
+              </v-btn>
+            </v-card-actions>
+          </v-card>
+        </v-dialog>
+
+        <!-- Scope Action Dialog (Delete/Leave) -->
+        <v-dialog v-model="showingScopeActionDialog" max-width="400px">
+          <v-card>
+            <v-card-title class="text-h5">
+              {{ selectedScope?.access_type === 'owner' ? 'Delete Household' : 'Leave Household' }}
+            </v-card-title>
+            <v-card-text>
+              <p v-if="selectedScope?.access_type === 'owner'" class="text-red">
+                Warning: This will permanently delete the household "{{ selectedScope?.name }}" and remove access for all members. This action cannot be undone.
+              </p>
+              <p v-else>
+                Are you sure you want to leave the household "{{ selectedScope?.name }}"? You'll need a new invitation to rejoin.
+              </p>
+            </v-card-text>
+            <v-card-actions>
+              <v-spacer></v-spacer>
+              <v-btn color="grey" text @click="closeScopeActionDialog">Cancel</v-btn>
+              <v-btn
+                :color="selectedScope?.access_type === 'owner' ? 'error' : 'warning'"
+                @click="handleScopeAction"
+                :loading="isProcessingAction"
+              >
+                {{ selectedScope?.access_type === 'owner' ? 'Delete' : 'Leave' }}
+              </v-btn>
+            </v-card-actions>
+          </v-card>
+        </v-dialog>
+      </div>
+
+
     </v-container>
   </template>
   
@@ -170,6 +261,15 @@
         isSending: false,
         isResponding: null,
         isLoading: true, // Add loading state
+        showingRemoveMemberDialog: false,
+        showingScopeActionDialog: false,
+        memberToRemove: {
+            scopeId: null,
+            email: null
+        },
+        selectedScope: null,
+        isRemoving: false,
+        isProcessingAction: false,
       }
     },
     mounted() {
@@ -308,6 +408,20 @@
           this.isResponding = null
         }
       },
+
+      getMemberIcon(member) {
+            if (member.invite_status === 'pending') {
+            return 'mdi-clock-outline'
+            }
+            return member.access_type === 'owner' ? 'mdi-crown' : 'mdi-account'
+        },
+
+        getMemberStatus(member) {
+            if (member.invite_status === 'pending') {
+            return 'Invitation Pending'
+            }
+            return member.access_type === 'owner' ? 'Owner' : 'Member'
+    },
   
       showInviteModal(scopeId) {
       this.selectedScopeId = scopeId
@@ -319,6 +433,90 @@
         this.selectedScopeId = null
         this.inviteEmail = ''
         },
+
+        showRemoveMemberDialog(scopeId, email) {
+        this.memberToRemove = { scopeId, email }
+        this.showingRemoveMemberDialog = true
+        },
+
+        closeRemoveMemberDialog() {
+        this.showingRemoveMemberDialog = false
+        this.memberToRemove = { scopeId: null, email: null }
+        },
+
+        showScopeActionDialog(scope) {
+        this.selectedScope = scope
+        this.showingScopeActionDialog = true
+        },
+
+        closeScopeActionDialog() {
+        this.showingScopeActionDialog = false
+        this.selectedScope = null
+        },
+
+        async removeMember() {
+            this.isRemoving = true
+            try {
+                const response = await fetch('/api/remove_household_member', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        scopeId: this.memberToRemove.scopeId,
+                        email: this.memberToRemove.email,
+                    }),
+                })
+                const data = await response.json()
+                if (data.success) {
+                    await this.fetchScopes()
+                    this.showingRemoveMemberDialog = false // Directly set dialog state
+                    this.memberToRemove = { scopeId: null, email: null }
+                    this.$toast.success('Member removed successfully')
+                } else {
+                    this.$toast.error(data.error || 'Failed to remove member')
+                }
+            } catch (error) {
+                console.error('Error removing member:', error)
+                this.$toast.error('Failed to remove member')
+            } finally {
+                this.isRemoving = false
+            }
+        },
+
+        async handleScopeAction() {
+            if (!this.selectedScope) return
+
+            this.isProcessingAction = true
+            const isOwner = this.selectedScope.access_type === 'owner'
+            const endpoint = isOwner ? '/api/delete_household' : '/api/leave_household'
+
+            try {
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        scopeId: this.selectedScope.id,
+                    }),
+                })
+                const data = await response.json()
+                if (data.success) {
+                    await this.fetchScopes()
+                    this.showingScopeActionDialog = false // Directly set dialog state
+                    this.selectedScope = null
+                    this.$toast.success(isOwner ? 'Household deleted successfully' : 'Left household successfully')
+                } else {
+                    this.$toast.error(data.error || `Failed to ${isOwner ? 'delete' : 'leave'} household`)
+                }
+            } catch (error) {
+                console.error('Error processing scope action:', error)
+                this.$toast.error(`Failed to ${isOwner ? 'delete' : 'leave'} household`)
+            } finally {
+                this.isProcessingAction = false
+            }
+        }
     },
   }
   </script>
@@ -335,34 +533,48 @@
   .gap-2 {
     gap: 8px;
   }
-
-  /* Invite button absolute positioning */
-.scope-card {
-  position: relative;
-}
-
-.invite-btn {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-}
-
-/* Member chips layout */
-.member-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-}
-
-.member-chip {
-  padding: 24px 24px; /* Add more padding to make it roomier */
-}
-
-.ma-2 {
-  margin: 8px;
-}
-
-.household-settings-div {
+  
+  .scope-card {
+    position: relative;
+    padding-top: 60px; /* Add space at the top for the buttons */
+  }
+  
+  .scope-actions {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: 100%;
+    display: flex;
+    justify-content: flex-end;
+  }
+  
+  .action-buttons {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+  
+  /* Member chips layout */
+  .member-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  
+  .member-chip {
+    padding: 24px 24px;
+  }
+  
+  .ma-2 {
+    margin: 8px;
+  }
+  
+  .household-settings-div {
     max-width: 750px;
-}
+  }
+  
+  .text-red {
+    color: #ff5252;
+  }
   </style>

@@ -230,16 +230,145 @@ def get_household_members():
         members_query = (
             db.session.query(Account, ScopeAccess)
             .join(ScopeAccess, Account.id == ScopeAccess.AccountID)
-            .filter(ScopeAccess.ScopeID == scope_id)
+            .filter(
+                ScopeAccess.ScopeID == scope_id,
+                ScopeAccess.InviteStatus.in_(['accepted', 'pending'])  # Include pending invites
+            )
             .all()
         )
         
         members = [{
             "email": account.user_email,
-            "access_type": access.AccessType
+            "access_type": access.AccessType,
+            "invite_status": access.InviteStatus
         } for account, access in members_query]
         
         return jsonify({"success": True, "members": members})
     
     except Exception as e:
+        return jsonify({"success": False, "error": str(e)})
+
+@household_routes.route("/api/leave_household", methods=["POST"])
+@login_required_api
+def leave_household():
+    """Leave a household scope"""
+    try:
+        data = request.json
+        scope_id = data.get("scopeId")
+
+        if not scope_id:
+            return jsonify({"success": False, "error": "Scope ID is required"})
+
+        # Find the user's access record
+        access = ScopeAccess.query.filter_by(
+            ScopeID=scope_id,
+            AccountID=current_user.id
+        ).first()
+
+        if not access:
+            return jsonify({"success": False, "error": "Access not found"})
+
+        if access.AccessType == 'owner':
+            return jsonify({"success": False, "error": "Owners cannot leave. Please delete the household or transfer ownership first."})
+
+        # Remove the access record
+        db.session.delete(access)
+        db.session.commit()
+
+        return jsonify({
+            "success": True,
+            "message": "Successfully left the household"
+        })
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"success": False, "error": str(e)})
+
+@household_routes.route("/api/delete_household", methods=["POST"])
+@login_required_api
+def delete_household():
+    """Delete an entire household scope"""
+    try:
+        data = request.json
+        scope_id = data.get("scopeId")
+
+        if not scope_id:
+            return jsonify({"success": False, "error": "Scope ID is required"})
+
+        # Check if the user is the owner
+        owner_access = ScopeAccess.query.filter_by(
+            ScopeID=scope_id,
+            AccountID=current_user.id,
+            AccessType='owner'
+        ).first()
+
+        if not owner_access:
+            return jsonify({"success": False, "error": "Only owners can delete households"})
+
+        # Delete all access records for this scope
+        ScopeAccess.query.filter_by(ScopeID=scope_id).delete()
+        
+        # Delete the scope itself
+        Scope.query.filter_by(ScopeID=scope_id).delete()
+        
+        db.session.commit()
+
+        return jsonify({
+            "success": True,
+            "message": "Household deleted successfully"
+        })
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"success": False, "error": str(e)})
+    
+@household_routes.route("/api/remove_household_member", methods=["POST"])
+@login_required_api
+def remove_household_member():
+    """Remove a member from a household scope"""
+    try:
+        data = request.json
+        scope_id = data.get("scopeId")
+        email = data.get("email")
+
+        if not scope_id or not email:
+            return jsonify({"success": False, "error": "Scope ID and email are required"})
+
+        # Check if the current user is the owner
+        owner_access = ScopeAccess.query.filter_by(
+            ScopeID=scope_id,
+            AccountID=current_user.id,
+            AccessType='owner'
+        ).first()
+
+        if not owner_access:
+            return jsonify({"success": False, "error": "You don't have permission to remove members"})
+
+        # Find the member to remove
+        member = Account.query.filter_by(user_email=email).first()
+        if not member:
+            return jsonify({"success": False, "error": "Member not found"})
+
+        # Find and delete the member's access
+        member_access = ScopeAccess.query.filter_by(
+            ScopeID=scope_id,
+            AccountID=member.id
+        ).first()
+
+        if not member_access:
+            return jsonify({"success": False, "error": "Member access not found"})
+
+        if member_access.AccessType == 'owner':
+            return jsonify({"success": False, "error": "Cannot remove an owner"})
+
+        db.session.delete(member_access)
+        db.session.commit()
+
+        return jsonify({
+            "success": True,
+            "message": f"Member {email} removed successfully"
+        })
+
+    except Exception as e:
+        db.session.rollback()
         return jsonify({"success": False, "error": str(e)})

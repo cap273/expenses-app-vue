@@ -232,7 +232,7 @@ export default {
       return chartData.value?.labels?.length > 0;
     });
 
-    const chartOptions = computed(() => {
+        const chartOptions = computed(() => {
       if (selectedChartType.value === 'sankey') {
         return {
           responsive: true,
@@ -250,7 +250,9 @@ export default {
           },
         };
       }
-      return {
+
+      // Base options for all chart types
+      const baseOptions = {
         responsive: true,
         maintainAspectRatio: false,
         plugins: {
@@ -260,19 +262,29 @@ export default {
           tooltip: {
             callbacks: {
               label: function(context) {
-                let label = context.dataset.label || '';
-                if (label) {
-                  label += ': ';
+                if (selectedChartType.value === 'pie') {
+                  const label = context.label || '';
+                  const value = formatCurrency(context.raw);
+                  return `${label}: ${value}`;
+                } else {
+                  let label = context.dataset.label || '';
+                  if (label) {
+                    label += ': ';
+                  }
+                  if (context.parsed.y !== null) {
+                    label += formatCurrency(context.parsed.y);
+                  }
+                  return label;
                 }
-                if (context.parsed.y !== null) {
-                  label += formatCurrency(context.parsed.y);
-                }
-                return label;
               }
             }
           }
-        },
-        scales: {
+        }
+      };
+
+      // Add scales configuration only for bar charts
+      if (selectedChartType.value === 'bar') {
+        baseOptions.scales = {
           y: {
             beginAtZero: true,
             ticks: {
@@ -281,8 +293,10 @@ export default {
               }
             }
           }
-        }
-      };
+        };
+      }
+
+      return baseOptions;
     });
 
     const chartData = computed(() => {

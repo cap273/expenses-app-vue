@@ -40,7 +40,7 @@
             <div class="text-center red--text text-bold">{{ errorMessage }}</div>
             <v-card-actions class="justify-center">
               <v-btn 
-                color="primary" 
+                class="createacc-btn"
                 type="submit" 
                 :loading="loading"
                 @click="createAccount"
@@ -138,5 +138,12 @@ export default {
 color: red;
 font-weight: bold;
 text-align: center;
+}
+
+.createacc-btn {
+  background-color: #1976d2; /* Filled primary color */
+  color: white; /* White text */
+  font-weight: bold;
+  width: 100%; /* Optional: full width */
 }
 </style>

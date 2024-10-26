@@ -81,6 +81,28 @@
               </v-btn>
             </v-form>
       </v-card-text>
+ 
+      <v-divider class="my-4"></v-divider>
+        <!-- Color Mode Section 
+        <v-card-title class="px-0">Appearance</v-card-title>
+        <v-row>
+          <v-col>
+            <v-select
+              v-model="colorMode"
+              :items="colorModeOptions"
+              item-title="title"
+              item-value="value"
+              label="Color Theme"
+            >
+              <template v-slot:prepend>
+                <v-icon :icon="colorModeIcon"></v-icon>
+              </template>
+            </v-select>
+          </v-col>
+        </v-row>
+      -->
+
+
       <v-card-actions>
         <v-alert
           v-if="responseMessage"
@@ -98,11 +120,32 @@
 <script>
 import { ref, computed, onMounted } from 'vue';
 import { globalState } from '@/main.js';
+//import { useAppColorMode } from '@/composables/useAppColorMode';
 
 export default {
   name: 'Profile',
   setup() {
-    // Initialize with globalState values
+    // Color mode setup
+    /*
+    const colorMode = useAppColorMode();
+    const colorModeOptions = [
+      { title: 'Light Mode', value: 'light' },
+      { title: 'Dark Mode', value: 'dark' },
+      { title: 'Sepia Mode', value: 'sepia' },
+      { title: 'Café Mode', value: 'cafe' }
+    ];
+    const colorModeIcon = computed(() => {
+      const icons = {
+        light: 'mdi-white-balance-sunny',
+        dark: 'mdi-moon-waning-crescent',
+        sepia: 'mdi-palette-swatch',
+        cafe: 'mdi-coffee'
+      };
+      return icons[colorMode.value] || icons.light;
+    });
+    */
+
+    // Existing profile setup
     const email = ref('');
     const newUsername = ref('');
     const currentPassword = ref('');
@@ -118,7 +161,6 @@ export default {
 
     // Initialize user data from globalState
     onMounted(() => {
-      // Fetch fresh data when component mounts
       fetch('/api/auth/status')
         .then(response => response.json())
         .then(data => {
@@ -141,7 +183,6 @@ export default {
         value === newPassword.value || 'Passwords do not match.',
     };
 
-    // Define computed properties
     const currentPasswordRules = computed(() => {
       if (newPassword.value || confirmNewPassword.value) {
         return [rules.minLength];
@@ -235,8 +276,15 @@ export default {
       }
     };
 
-    // Make sure to return all refs and methods
     return {
+      // Color mode returns
+      /*
+      colorMode,
+      colorModeOptions,
+      colorModeIcon,
+      */
+      
+      // Existing profile returns
       email,
       newUsername,
       currentPassword,

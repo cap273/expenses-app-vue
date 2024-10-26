@@ -25,9 +25,9 @@
             <div class="text-center red--text text-bold">{{ errorMessage }}</div>
             <v-card-actions class="justify-center">
               <v-btn 
-                color="primary" 
                 type="submit" 
                 :loading="loading"
+                class="login-btn"
                 @click="loginUser"
               >
                 Login
@@ -100,4 +100,12 @@ export default {
   font-weight: bold;
   text-align: center;
 }
+
+.login-btn {
+  background-color: #1976d2; /* Filled primary color */
+  color: white; /* White text */
+  font-weight: bold;
+  width: 100%; /* Optional: full width */
+}
+
 </style>

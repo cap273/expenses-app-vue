@@ -13,8 +13,8 @@
         <v-row justify="center">
             <v-col cols="12" sm="8" md="6" class="d-flex justify-center">
                 <v-btn
-                    color="primary"
-                    class="mt-5"
+                    text
+                    class="signup-btn mt-5"
                     @click="$router.push('/login')"
                 >
                 I already have an account

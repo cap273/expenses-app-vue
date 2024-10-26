@@ -7,13 +7,14 @@
 import '@mdi/font/css/materialdesignicons.css';
 
 import { createApp } from 'vue';
+import { createVuetify } from 'vuetify'
 import App from './App.vue';
 import router from './router';
 import Toast from 'vue-toastification';
 import 'vue-toastification/dist/index.css';
 import { registerPlugins } from '@/plugins';
-
 import { reactive } from 'vue';
+import './assets/colorModes.css'; // Add this line
 
 // Create a global state
 export const globalState = reactive({
@@ -23,6 +24,32 @@ export const globalState = reactive({
   user_email: null, // Add user_email here
   isDrawerOpen: false // Reactive state for the navigation drawer
 });
+
+const vuetify = createVuetify({
+  theme: {
+    defaultTheme: 'light',
+    themes: {
+      light: {
+        dark: false,
+        colors: {
+          primary: '#1976D2',
+          secondary: '#424242',
+          background: '#ffffff',
+          surface: '#ffffff',
+        },
+      },
+      dark: {
+        dark: true,
+        colors: {
+          primary: '#64B5F6',
+          secondary: '#757575',
+          background: '#121212',
+          surface: '#1E1E1E',
+        },
+      },
+    },
+  },
+})
 
 const app = createApp(App);
 registerPlugins(app);
@@ -48,6 +75,7 @@ fetch('/api/auth/status')
     }
   });
 
+//app.use(vuetify)
 app.use(router);
 app.use(Toast);
 

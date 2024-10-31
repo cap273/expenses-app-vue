@@ -19,6 +19,7 @@ from flask_backend.database.tables import (
 from flask_backend.routes.account_routes import account_routes
 from flask_backend.routes.auth_routes import auth_routes
 from flask_backend.routes.expense_routes import expense_routes
+from flask_backend.routes.plaid_routes import plaid_routes
 
 
 # Initialize Flask-Login
@@ -87,6 +88,7 @@ def create_app(test_config=None):
     app.register_blueprint(account_routes)
     app.register_blueprint(auth_routes)
     app.register_blueprint(expense_routes)
+    app.register_blueprint(plaid_routes)
 
     @app.route("/")
     def serve_vue_app():

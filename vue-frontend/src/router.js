@@ -4,6 +4,7 @@ import Hero from './components/Hero.vue';
 import SignUpWithLogin from '@/views/SignUpWithLogin.vue';
 import InputExpenses from './components/InputExpenses.vue';
 import ViewExpenses from './components/ViewExpenses.vue';
+import PlaidLink from './components/PlaidLink.vue';
 
 const routes = [
   {
@@ -35,6 +36,11 @@ const routes = [
     path: '/input_expenses',
     name: 'InputExpenses',
     component: InputExpenses,
+  },
+  {
+    path: '/plaid',
+    name: 'PlaidLink',
+    component: PlaidLink,
   },
 ];
 

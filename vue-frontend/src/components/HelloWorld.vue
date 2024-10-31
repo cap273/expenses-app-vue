@@ -1,9 +1,9 @@
 <template>
   <v-container class="fill-height">
     <v-responsive class="align-center text-center fill-height">
-      <v-img height="300" src="@/assets/logo.svg" />
+      <v-img height="300" src="@/assets/randomSimpleLogo.svg" />
 
-      <div class="text-body-2 font-weight-light mb-n1">Welcome to</div>
+      <div class="text-body-2 font-weight-light mb-n1">AppName</div>
 
       <h1 class="text-h2 font-weight-bold">Vuetify</h1>
 

@@ -4,6 +4,8 @@ import Hero from './components/Hero.vue';
 import SignUpWithLogin from '@/views/SignUpWithLogin.vue';
 import InputExpenses from './components/InputExpenses.vue';
 import ViewExpenses from './components/ViewExpenses.vue';
+import Profile from '@/components/Profile.vue';
+import HouseholdSettings from '@/components/HouseholdSettings.vue';
 import PlaidLink from './components/PlaidLink.vue';
 
 const routes = [
@@ -36,6 +38,18 @@ const routes = [
     path: '/input_expenses',
     name: 'InputExpenses',
     component: InputExpenses,
+  },
+  {
+    path: '/profile',
+    name: 'Profile',
+    component: Profile,
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/household',
+    name: 'HouseholdSettings',
+    component: HouseholdSettings,
+    meta: { requiresAuth: true },
   },
   {
     path: '/plaid',

@@ -1,5 +1,5 @@
 <template>
-    <v-container>
+    <v-container class="rounded-box-embed">
         <h2 class="expenses-header text-center">Input New Expenses</h2>
 
         <!-- Response Message -->
@@ -11,25 +11,29 @@
             <v-table dense class="elevation-1 tight-table">
                 <thead>
                 <tr>
-                    <th class="column-scope">Expense Scope</th>
+                    <th class="column-scope">Scope</th>
                     <th class="column-day">Day</th>
                     <th class="column-month">Month</th>
                     <th class="column-year">Year</th>
                     <th class="column-amount">Amount</th>
                     <th class="column-category">Expense Category</th>
                     <th class="column-notes">Additional Notes</th>
+                    <th class="column-set-date">Set Date</th>
                 </tr>
                 </thead>
                 <tbody>
                 <tr v-for="(expense, index) in expenses" :key="`row-${index}-${expense.rowKey}`">
                     <!-- Expense Scope Dropdown -->
                     <td>
-                    <v-select
+                        <v-select
                         v-model="expense.scope"
                         :items="scopes"
+                        item-title="name"
+                        item-value="id"
+                        label="Select Scope"
                         :rules="[rules.scope]"
                         class="input-field input-field--scope"
-                    ></v-select>
+                        ></v-select>
                     </td>
                     <!-- Day Field -->
                     <td>
@@ -87,6 +91,10 @@
                         class="input-field .input-field--additionalnotes"
                     ></v-text-field>
                     </td>
+                    <!-- current date button-->
+                    <td>
+                    <v-btn small @click="setCurrentDate(expense)">Today</v-btn>
+                    </td>
                 </tr>
             </tbody>
             </v-table>
@@ -113,10 +121,17 @@
 </template>
 
 <script>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, watch } from 'vue';
 
 export default {
-    setup() {
+    //nExpenseData prop added to edit existing expense
+    props: {
+    expenseData: {
+      type: Object,
+      default: null,
+    },
+  },
+    setup(props,{emit}) {
 
         const loading = ref(false); // State to manage loading status
 
@@ -126,7 +141,7 @@ export default {
 
         // Data structure to map names of people to that person's ID, according
         // to the backend server
-        const nameToIdMap = ref({});
+       // const nameToIdMap = ref({});
 
         // Stores the response message and its type
         const responseMessage = ref({ message: '', type: '' });
@@ -138,38 +153,66 @@ export default {
         // rowKey property is used to reset form validation when clearing a row of its data
         const expenses = ref([{ 
             scope: '', day: '', month: '', year: '', amount: '', category: '', notes: '', 
-            rowKey: 0 
+            rowKey: 0 ,ExpenseID: null,
         }]);
         const months = ref(['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']);
         
-
+        //watch for changes in expenseData prop to populate the form
+        watch(
+      () => props.expenseData,
+      (newVal) => {
+        if (newVal) {
+            console.log('Received expenseData:', newVal);
+          expenses.value = [{
+            scope: newVal.ScopeID || '',
+            day: newVal.Day || '',
+            month: newVal.Month || '',
+            year: newVal.Year || '',
+            amount: newVal.Amount ? newVal.Amount.replace(/[^0-9.]/g, '') : '',
+            category: newVal.ExpenseCategory || '',
+            notes: newVal.AdditionalNotes || '',
+            ExpenseID: newVal.ExpenseID,
+          }];
+        }
+        else {
+          // If no expenseData, reset the form
+          expenses.value = [
+            {
+              scope: '',
+              day: '',
+              month: '',
+              year: '',
+              amount: '',
+              category: '',
+              notes: '',
+              rowKey: 0,
+              ExpenseID: null,
+            },
+          ];
+        }
+      },
+      { immediate: true }
+    );
+        // Update fetchScopes to use the new API
         const fetchScopes = async () => {
-            try {
-                const response = await fetch('/api/get_persons');
-                if (!response.ok) {
-                    throw new Error('Network response was not ok');
-                }
-                const data = await response.json(); 
-
-                // Create the mapping from PersonName to PersonID
-                nameToIdMap.value = data.reduce((map, person) => {
-                    map[person.PersonName] = person.PersonID;
-                    return map;
-                }, {});
-
-                // Populate scopes based on the number of persons
-                if (data.length === 1) {
-                    // If there's only one person, use their name
-                    scopes.value = [data[0].PersonName];
-                } else if (data.length > 1) {
-                    // If there are multiple persons, add "Joint" and each person's name
-                    scopes.value = ['Joint', ...data.map(person => person.PersonName)];
-                }
-            } catch (error) {
-                console.error('Error fetching scopes:', error);
-                // Handle error, maybe set scopes to default values or show an error message
+        try {
+            const response = await fetch('/api/get_scopes');
+            if (!response.ok) {
+            throw new Error('Network response was not ok');
             }
+            const data = await response.json();
+            if (data.success) {
+            // Transform scopes data for the dropdown
+            scopes.value = data.scopes.map(scope => ({
+                id: scope.id,
+                name: `${scope.name} (${scope.type})`
+            }));
+            }
+        } catch (error) {
+            console.error('Error fetching scopes:', error);
+        }
         };
+
 
         const fetchCategories = async () => {
             try {
@@ -188,7 +231,7 @@ export default {
         const rules = {
             required: value => !!value || 'Required.',
             scope: value => {
-                return value != null && value.trim() !== '' || 'Scope is required';
+                return value !== null && value !== undefined && value !== '' || 'Scope is required';
             },
             day: value => {
                 if (!value) return 'Day is required';
@@ -213,9 +256,10 @@ export default {
                 return true;
             },
             category: value => {
-                return value != null && value.trim() !== '' || 'Expense Category is required';
+                return value !== null && value !== undefined && value !== '' || 'Expense Category is required';
             },
         };
+
 
         const addRow = () => {
         const lastExpense = expenses.value[expenses.value.length - 1];
@@ -278,15 +322,25 @@ export default {
                 // as the Expense Scope. This avoids having to do this on the backend.
                 const modifiedExpenses = expenses.value.map(expense => ({
                     ...expense,
-                    scope: expense.scope === 'Joint' ? 'Joint' : nameToIdMap.value[expense.scope]
+                    scopeId: expense.scope // scope is already the ID from the v-select
                 }));
 
-                const response = await fetch('/api/submit_expenses', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ expenses: modifiedExpenses }),
+                //Defining variables for response
+                let url = '/api/submit_expenses';
+                let method = 'POST';
+
+                // Check if we're editing an existing expense
+                if (modifiedExpenses[0].ExpenseID) {
+                url = '/api/update_expense';
+                method = 'PUT';
+                }
+
+                const response = await fetch(url, {
+                method,
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ expenses: modifiedExpenses }),
                 });
 
                 if (!response.ok) {
@@ -303,6 +357,8 @@ export default {
                     if (form.value) {
                         form.value.reset(); // Reset the form validation
                     }
+                    //New emit for updating expenses
+                    emit('update-expenses');
                 } else {
                     responseMessage.value = { message: responseData.error, type: 'error' };
                 }
@@ -320,6 +376,14 @@ export default {
             fetchCategories();
         });
 
+        //current date function
+         function setCurrentDate(expense) {
+            const today = new Date();
+            expense.day = today.getDate();
+            expense.month = months.value[today.getMonth()];
+            expense.year = today.getFullYear();
+            }
+
         return { 
             expenses,
             scopes, 
@@ -332,7 +396,8 @@ export default {
             addRow, 
             deleteRow, 
             clearLastRow,
-            submitExpenses
+            submitExpenses,
+            setCurrentDate,
         };
     }
 };
@@ -348,13 +413,10 @@ export default {
   margin-bottom: 20px;
 }
 
-.button-row {
-  margin-top: 20px;
-}
-
 .tight-table {
   table-layout: fixed;
   width: 100%;
+  border-radius: 12px; /* Rounded corners */
 }
 
 .text-success {
@@ -363,6 +425,40 @@ export default {
 
 .text-error {
     color: red;
+}
+
+/* Reduce the padding for table cells to tighten spacing */
+.tight-table th,
+.tight-table td {
+  padding: 4px 8px !important; /* Reduce padding inside cells */
+}
+
+/* Compact the input fields */
+.input-field {
+  margin: 0; /* Remove margin around input fields */
+  padding: 4px 8px; /* Reduce padding inside the fields */
+}
+
+/* Reduce the height of text fields and selects */
+.v-text-field,
+.v-select {
+  padding-right: 0;
+  padding-left: 0; /* Remove default padding */
+}
+
+/* Adjusting the button to reduce spacing */
+.button-row {
+  margin-top: 10px; /* Reduce top margin for buttons */
+}
+
+
+/* New class for rounded boxes with light background */
+.rounded-box-embed {
+  background-color: #ffffffe3; /* Light grey background for boxes */
+  border-radius: 12px; /* Rounded corners */
+  padding: 20px;
+  margin-bottom: 20px; /* Space between boxes */
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Optional shadow for a subtle 3D effect */
 }
 
 </style>

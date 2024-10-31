@@ -3,7 +3,7 @@ import logging
 from dotenv import load_dotenv
 
 from flask import Flask, send_from_directory
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from flask_login import LoginManager
 
 from flask_backend.utils.db_tools import (
@@ -14,12 +14,16 @@ from flask_backend.database.models import db, Account
 from flask_backend.database.tables import (
     categories_table,
     CATEGORY_LIST,
+    scopes_table,
+    scope_access_table,
+    expenses_table,  # Added this import
 )
 
 from flask_backend.routes.account_routes import account_routes
 from flask_backend.routes.auth_routes import auth_routes
 from flask_backend.routes.expense_routes import expense_routes
 from flask_backend.routes.plaid_routes import plaid_routes
+from flask_backend.routes.household_routes import household_routes
 
 
 # Initialize Flask-Login
@@ -82,13 +86,21 @@ def create_app(test_config=None):
     def load_user(user_id):
         return Account.query.get(int(user_id))
 
-    populate_categories_table(app.config["ENGINE"], categories_table, CATEGORY_LIST)
+    # Create tables in correct order
+    with app.app_context():
+        # Create/recreate other tables
+        db.create_all()
+        populate_categories_table(app.config["ENGINE"], categories_table, CATEGORY_LIST)
+        scopes_table.create(app.config["ENGINE"], checkfirst=True)
+        scope_access_table.create(app.config["ENGINE"], checkfirst=True)
+
 
     # Register blueprints
     app.register_blueprint(account_routes)
     app.register_blueprint(auth_routes)
     app.register_blueprint(expense_routes)
     app.register_blueprint(plaid_routes)
+    app.register_blueprint(household_routes)
 
     @app.route("/")
     def serve_vue_app():

@@ -25,9 +25,9 @@
             <div class="text-center red--text text-bold">{{ errorMessage }}</div>
             <v-card-actions class="justify-center">
               <v-btn 
-                color="primary" 
                 type="submit" 
                 :loading="loading"
+                class="login-btn"
                 @click="loginUser"
               >
                 Login
@@ -75,7 +75,7 @@ export default {
         if (data.authenticated) {
           globalState.authenticated = true;
           globalState.username = data.username;
-          this.$router.push('/input_expenses'); // Redirect to Input Expenses page
+          this.$router.push('/view_expenses'); // Redirect to View Expenses page
         } else {
           this.errorMessage = data.error || 'Authentication failed';
         }
@@ -100,4 +100,12 @@ export default {
   font-weight: bold;
   text-align: center;
 }
+
+.login-btn {
+  background-color: #1976d2; /* Filled primary color */
+  color: white; /* White text */
+  font-weight: bold;
+  width: 100%; /* Optional: full width */
+}
+
 </style>

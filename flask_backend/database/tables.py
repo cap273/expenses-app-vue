@@ -50,23 +50,20 @@ CATEGORY_LIST = [
     "Landlord Expenses",
 ]
 
-# Define the expenses table
+# Modify expenses_table definition
 expenses_table = Table(
     "expenses",
     metadata,
     Column("ExpenseID", Integer, primary_key=True),
-    Column("AccountID", Integer, ForeignKey("accounts.AccountID"), nullable=False),
-    Column("ExpenseScope", String(255)),  # Either 'Joint' or the name of an individual
-    Column(
-        "PersonID", Integer, ForeignKey("persons.PersonID"), nullable=True
-    ),  # NULL if it's a joint expense
+    Column("ScopeID", Integer, ForeignKey("scopes.ScopeID"), nullable=False),  # Changed from AccountID
+    Column("PersonID", Integer, ForeignKey("persons.PersonID"), nullable=True),
     Column("Day", Integer, nullable=False),
     Column("Month", String(50), nullable=False),
     Column("Year", Integer, nullable=False),
     Column("ExpenseDate", Date, nullable=False),
     Column("ExpenseDayOfWeek", String(50)),
     Column("Amount", Float, nullable=False),
-    Column("AdjustedAmount", Float),  # Amount after adjustments
+    Column("AdjustedAmount", Float),
     Column("ExpenseCategory", String(255), nullable=False),
     Column("AdditionalNotes", String(255)),
     Column("CreateDate", Date),
@@ -75,9 +72,6 @@ expenses_table = Table(
     Column("SuggestedCategory", String(255)),
     Column("CategoryConfirmed", Boolean),
     extend_existing=False,
-    # Set implicit_returning to False so that
-    # SQLAlchemy won't try to use the OUTPUT clause to fetch the inserted ID.
-    # This should avoid conflicts with database triggers for ID generation
     implicit_returning=False,
 )
 
@@ -105,5 +99,31 @@ persons_table = Table(
     # Set implicit_returning to False so that
     # SQLAlchemy won't try to use the OUTPUT clause to fetch the inserted ID.
     # This should avoid conflicts with database triggers for ID generation
+    implicit_returning=False,
+)
+
+scopes_table = Table(
+    "scopes",
+    metadata,
+    Column("ScopeID", Integer, primary_key=True),
+    Column("ScopeName", String(255), nullable=False),
+    Column("ScopeType", String(50), nullable=False),
+    Column("CreateDate", Date),
+    Column("LastUpdated", Date),
+    extend_existing=False,
+    implicit_returning=False,
+)
+
+scope_access_table = Table(
+    "scope_access",
+    metadata,
+    Column("AccessID", Integer, primary_key=True),
+    Column("ScopeID", Integer, ForeignKey("scopes.ScopeID"), nullable=False),
+    Column("AccountID", Integer, ForeignKey("accounts.AccountID"), nullable=False),
+    Column("AccessType", String(50), nullable=False),
+    Column("InviteStatus", String(50), nullable=False),
+    Column("CreateDate", Date),
+    Column("LastUpdated", Date),
+    extend_existing=False,
     implicit_returning=False,
 )

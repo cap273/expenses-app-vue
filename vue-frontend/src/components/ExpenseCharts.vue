@@ -101,6 +101,7 @@ import { ref, computed, defineComponent, h } from 'vue';
 import { Bar, Pie, Chart } from 'vue-chartjs';
 import { Chart as ChartJS, registerables } from 'chart.js';
 import { SankeyController, Flow } from 'chartjs-chart-sankey';
+import { formatDate, parseDateInUTC} from '@/utils/dateUtils.js';
 
 ChartJS.register(...registerables);
 ChartJS.register(SankeyController, Flow);
@@ -193,22 +194,25 @@ export default {
     });
 
     const filteredExpensesByDate = computed(() => {
-      if (!props.expenses) return [];
-      
-      return props.expenses.filter((expense) => {
-        const expenseDate = new Date(expense.ExpenseDate);
-        const now = new Date();
-        
-        if (selectedTimePeriod.value === 'month') {
-          return expenseDate.getFullYear() === now.getFullYear() &&
-                 expenseDate.getMonth() === now.getMonth();
-        } else if (selectedTimePeriod.value === 'year') {
-          return expenseDate.getFullYear() === now.getFullYear();
-        } else {
-          return true; // lifetime
-        }
+        if (!props.expenses) return [];
+
+          return props.expenses.filter((expense) => {
+          const expenseDate = parseDateInUTC(expense.ExpenseDate);
+
+          const now = parseDateInUTC(new Date().toISOString());
+
+          if (selectedTimePeriod.value === 'month') {
+            return (
+              expenseDate.getUTCFullYear() === now.getUTCFullYear() &&
+              expenseDate.getUTCMonth() === now.getUTCMonth()
+            );
+          } else if (selectedTimePeriod.value === 'year') {
+            return expenseDate.getUTCFullYear() === now.getUTCFullYear();
+          } else {
+            return true; // lifetime
+          }
+        });
       });
-    });
 
     const filteredExpenses = computed(() => {
       if (!filteredExpensesByDate.value) return [];

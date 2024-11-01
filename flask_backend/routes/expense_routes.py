@@ -2,7 +2,7 @@ from flask import Blueprint, jsonify, request, current_app
 from sqlalchemy import select, case, text
 from sqlalchemy.sql import null
 from sqlalchemy.exc import SQLAlchemyError
-from datetime import datetime
+from datetime import datetime, date
 from flask_login import current_user
 from werkzeug.exceptions import BadRequestKeyError
 
@@ -97,6 +97,11 @@ def get_expenses():
 @expense_routes.route("/api/submit_expenses", methods=["POST"])
 @login_required_api
 def submit_new_expenses():
+    with current_app.config["ENGINE"].connect() as connection:
+        result = connection.execute(text("SELECT SYSDATETIMEOFFSET()"))
+        server_time = result.scalar()
+        print(f"DEBUG - SQL Server time: {server_time}")
+
     try:
         data = request.json
         expenses = data["expenses"]
@@ -106,23 +111,17 @@ def submit_new_expenses():
             "July", "August", "September", "October", "November", "December"
         ]
 
-        # Get user's personal scope
-        personal_scope = (
-            db.session.query(Scope)
-            .join(ScopeAccess)
+        # Get all scopes the user has access to
+        accessible_scopes = (
+            db.session.query(ScopeAccess)
             .filter(
                 ScopeAccess.AccountID == current_user.id,
-                Scope.ScopeType == 'personal',
                 ScopeAccess.InviteStatus == 'accepted'
             )
-            .first()
+            .all()
         )
 
-        if not personal_scope:
-            return jsonify({
-                "success": False,
-                "error": "No personal scope found for user"
-            })
+        accessible_scope_ids = [scope.ScopeID for scope in accessible_scopes]
 
         try:
             with current_app.config["ENGINE"].connect() as conn:
@@ -142,6 +141,13 @@ def submit_new_expenses():
                             return jsonify({
                                 "success": False,
                                 "error": "Missing required fields in the expense data",
+                            })
+
+                        # Verify scope access
+                        if scope not in accessible_scope_ids:
+                            return jsonify({
+                                "success": False,
+                                "error": "Invalid or inaccessible scope",
                             })
 
                         # Date validation
@@ -172,31 +178,19 @@ def submit_new_expenses():
 
                         # Parse the date
                         try:
-                            expense_date = datetime.strptime(
-                                f"{year}-{month}-{day}", "%Y-%B-%d"
-                            ).date()
-                        except ValueError:
+                            # Get month number (1-12) from month name
+                            month_num = [i for i, m in enumerate(months, 1) if m == month][0]
+                            expense_date = date(year, month_num, day)
+                            print(f"DEBUG - Date being inserted: {expense_date}")
+                        except (ValueError, IndexError):
                             return jsonify({
                                 "success": False,
                                 "error": f"Invalid date: {day}-{month}-{year}",
                             })
 
-                        # By default, use personal scope
-                        scope_id = personal_scope.ScopeID
-
-                        # If a household scope is specified, verify access
-                        if scope != "personal":
-                            scope_access = ScopeAccess.query.filter_by(
-                                ScopeID=scope,
-                                AccountID=current_user.id,
-                                InviteStatus='accepted'
-                            ).first()
-                            if scope_access:
-                                scope_id = scope
-
                         conn.execute(
                             expenses_table.insert().values(
-                                ScopeID=scope_id,
+                                ScopeID=scope,  # Use the scope ID directly
                                 PersonID=None,  # You might want to modify this based on your needs
                                 Day=day,
                                 Month=month,

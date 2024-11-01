@@ -1,5 +1,7 @@
 <template>
-  <v-container>
+<div class="page-background">
+  <v-container class="settings-container">
+    <div class="content-box">
     <v-card>
       <v-card-title>Profile Settings</v-card-title>
         <v-card-text>
@@ -114,7 +116,9 @@
         </v-alert>
       </v-card-actions>
     </v-card>
+  </div>
   </v-container>
+</div>
 </template>
 
 <script>
@@ -310,7 +314,6 @@ export default {
 
 <style scoped>
 .v-card {
-max-width: 500px;
-margin: auto;
+width:100%;
 }
 </style>

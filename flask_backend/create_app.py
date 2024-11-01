@@ -17,6 +17,7 @@ from flask_backend.database.tables import (
     scopes_table,
     scope_access_table,
     expenses_table,  # Added this import
+    persons_table,
 )
 
 from flask_backend.routes.account_routes import account_routes
@@ -89,9 +90,26 @@ def create_app(test_config=None):
     with app.app_context():
         # Create/recreate other tables
         db.create_all()
+        # Ensure Core tables are created in correct order
+        with app.config["ENGINE"].begin() as conn:
+            # Create tables in order of dependencies:
+            # 1. Categories (no dependencies)
+            categories_table.create(bind=conn, checkfirst=True)
+            
+            # 2. Scopes (no dependencies)
+            scopes_table.create(bind=conn, checkfirst=True)
+            
+            # 3. Persons (depends on accounts)
+            persons_table.create(bind=conn, checkfirst=True)
+            
+            # 4. Scope Access (depends on accounts and scopes)
+            scope_access_table.create(bind=conn, checkfirst=True)
+            
+            # 5. Expenses (depends on scopes and persons)
+            expenses_table.create(bind=conn, checkfirst=True)
+            
+        # Populate categories after tables are created
         populate_categories_table(app.config["ENGINE"], categories_table, CATEGORY_LIST)
-        scopes_table.create(app.config["ENGINE"], checkfirst=True)
-        scope_access_table.create(app.config["ENGINE"], checkfirst=True)
 
 
     # Register blueprints

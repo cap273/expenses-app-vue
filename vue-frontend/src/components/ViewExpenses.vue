@@ -48,7 +48,7 @@
             :headers="headers"
             :items="processedExpenses"
             :search="search"
-            class="elevation-1"
+            class="elevation-1 expense-table"
             item-value="ExpenseID"
             density="compact"
             :no-data-text="'No expenses found'"
@@ -57,6 +57,7 @@
             v-model="selected"
             :options="tableOptions"
             @update:options="updateTableOptions"
+            hover
           >
             <template v-slot:item.ScopeName="{ item }">
               {{ item.ScopeName }} ({{ item.ScopeType }})
@@ -68,10 +69,24 @@
 
             <!-- Scoped Slot for Actions Column -->
             <template v-slot:item.actions="{ item }">
-              <v-btn color="blue" @click="editExpense(item)">
-                <v-icon left>mdi-pencil</v-icon>
-                Edit
-              </v-btn>
+              <div class="action-buttons">
+                <v-btn
+                  icon="mdi-pencil"
+                  size="small"
+                  variant="text"
+                  color="grey-darken-1"
+                  class="me-2 action-button"
+                  @click="editExpense(item)"
+                ></v-btn>
+                <v-btn
+                  icon="mdi-delete"
+                  size="small"
+                  variant="text"
+                  color="grey-darken-1"
+                  class="action-button"
+                  @click="deleteExpense(item.ExpenseID)"
+                ></v-btn>
+              </div>
             </template>
           </v-data-table>
         </div>
@@ -129,6 +144,48 @@
   justify-content: center;
 }
 
+/* Add hover effects for the action buttons */
+.v-btn.v-btn--icon {
+  opacity: 0.7;
+  transition: opacity 0.2s ease;
+}
+
+.v-btn.v-btn--icon:hover {
+  opacity: 1;
+}
+
+/* Style the table rows and action buttons */
+.expense-table :deep(.v-data-table__tr) {
+  transition: background-color 0.2s ease;
+}
+
+.expense-table :deep(.v-data-table__tr:hover) {
+  background-color: rgba(0, 0, 0, 0.03);
+}
+
+/* Hide action buttons by default */
+.action-buttons {
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  display: flex;
+  align-items: center;
+}
+
+/* Show action buttons on row hover */
+.expense-table :deep(.v-data-table__tr:hover) .action-buttons {
+  opacity: 1;
+}
+
+/* Button hover effect */
+.action-button {
+  opacity: 0.7;
+  transition: opacity 0.2s ease, background-color 0.2s ease;
+}
+
+.action-button:hover {
+  opacity: 1;
+  background-color: rgba(0, 0, 0, 0.04);
+}
 </style>
 
 
@@ -180,6 +237,30 @@ export default {
         console.error('Error:', error);
       } finally {
         loading.value = false;
+      }
+    };
+
+    const deleteExpense = async (expenseId) => {
+      try {
+        const response = await fetch("/api/delete_expenses", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ expenseIds: [expenseId] }),
+        });
+
+        if (!response.ok) {
+          throw new Error("Failed to delete expense");
+        }
+
+        const data = await response.json();
+        if (data.success) {
+          // Remove the deleted expense from the list
+          expenses.value = expenses.value.filter(
+            expense => expense.ExpenseID !== expenseId
+          );
+        }
+      } catch (error) {
+        console.error("Error:", error);
       }
     };
 
@@ -291,6 +372,7 @@ export default {
       processedExpenses,
       showAddExpense,
       toggleAddExpense,
+      deleteExpense,
     };
   },
 };

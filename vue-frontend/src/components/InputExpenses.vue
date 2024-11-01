@@ -8,96 +8,173 @@
         </div>
 
         <v-form ref="form" id="expensesForm" @submit.prevent="submitExpenses">
-            <v-table dense class="elevation-1 tight-table">
-                <thead>
-                <tr>
-                    <th class="column-scope">Scope</th>
-                    <th class="column-day">Day</th>
-                    <th class="column-month">Month</th>
-                    <th class="column-year">Year</th>
-                    <th class="column-amount">Amount</th>
-                    <th class="column-category">Expense Category</th>
-                    <th class="column-notes">Additional Notes</th>
-                    <th class="column-set-date">Set Date</th>
-                </tr>
-                </thead>
-                <tbody>
-                <tr v-for="(expense, index) in expenses" :key="`row-${index}-${expense.rowKey}`">
-                    <!-- Expense Scope Dropdown -->
-                    <td>
+            <!-- Desktop view -->
+            <div class="d-none d-md-block">
+                <v-table dense class="elevation-1 tight-table">
+                    <thead>
+                    <tr>
+                        <th class="column-scope">Scope</th>
+                        <th class="column-day">Day</th>
+                        <th class="column-month">Month</th>
+                        <th class="column-year">Year</th>
+                        <th class="column-amount">Amount</th>
+                        <th class="column-category">Category</th>
+                        <th class="column-notes">Notes</th>
+                        <th class="column-set-date">Today</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr v-for="(expense, index) in expenses" :key="`row-${index}-${expense.rowKey}`">
+                        <!-- Expense Scope Dropdown -->
+                        <td>
+                            <v-select
+                            v-model="expense.scope"
+                            :items="scopes"
+                            item-title="name"
+                            item-value="id"
+                            label="Select Scope"
+                            :rules="[rules.scope]"
+                            class="input-field input-field--scope"
+                            ></v-select>
+                        </td>
+                        <!-- Day Field -->
+                        <td>
+                            <v-text-field
+                            v-model="expense.day"
+                            type="number"
+                            :rules="[rules.day]"
+                            class="input-field input-field--day"
+                            hide-spin-buttons
+                            ></v-text-field>
+                        </td>
+                        <!-- Month Dropdown -->
+                        <td>
                         <v-select
+                            v-model="expense.month"
+                            :items="months"
+                            :rules="[rules.month]"
+                            class="input-field input-field--month"
+                        ></v-select>
+                        </td>
+                        <!-- Year Field -->
+                        <td>
+                            <v-text-field
+                            v-model="expense.year"
+                            type="number"
+                            :rules="[rules.year]"
+                            class="input-field input-field--year"
+                            hide-spin-buttons
+                            ></v-text-field>
+                        </td>
+                        <!-- Amount Field -->
+                        <td>
+                            <v-text-field
+                            v-model="expense.amount"
+                            type="text"
+                            :rules="[rules.amount]"
+                            class="input-field input-field--amount"
+                            :prepend-inner-icon="'mdi-currency-usd'"
+                            ></v-text-field>
+                        </td>
+                        <!-- Expense Category Dropdown -->
+                        <td>
+                        <v-select
+                            v-model="expense.category"
+                            :items="categories"
+                            :rules="[rules.category]"
+                            class="input-field input-field--category"
+                        ></v-select>
+                        </td>
+                        <!-- Additional Notes Field -->
+                        <td>
+                        <v-text-field
+                            v-model="expense.notes"
+                            class="input-field input-field--notes"
+                        ></v-text-field>
+                        </td>
+                        <td class="today-button-cell">
+                            <v-btn 
+                                small 
+                                @click="setCurrentDate(expense)"
+                                class="today-btn"
+                                density="compact"
+                            >Today</v-btn>
+                        </td>
+                    </tr>
+                </tbody>
+                </v-table>
+            </div>
+
+            <!-- Mobile view -->
+            <div class="d-md-none">
+                <div v-for="(expense, index) in expenses" :key="`row-mobile-${index}-${expense.rowKey}`" class="mobile-expense-form">
+                    <v-select
                         v-model="expense.scope"
                         :items="scopes"
                         item-title="name"
                         item-value="id"
                         label="Select Scope"
                         :rules="[rules.scope]"
-                        class="input-field input-field--scope"
-                        ></v-select>
-                    </td>
-                    <!-- Day Field -->
-                    <td>
-                        <v-text-field
-                        v-model="expense.day"
-                        type="number"
-                        :rules="[rules.day]"
-                        class="input-field input-field--day"
-                        hide-spin-buttons
-                        ></v-text-field>
-                    </td>
-                    <!-- Month Dropdown -->
-                    <td>
-                    <v-select
-                        v-model="expense.month"
-                        :items="months"
-                        :rules="[rules.month]"
-                        class="input-field input-field--month"
+                        class="mb-2"
                     ></v-select>
-                    </td>
-                    <!-- Year Field -->
-                    <td>
+
+                    <div class="date-fields">
                         <v-text-field
-                        v-model="expense.year"
-                        type="number"
-                        :rules="[rules.year]"
-                        class="input-field input-field--year"
-                        hide-spin-buttons
+                            v-model="expense.day"
+                            type="number"
+                            label="Day"
+                            :rules="[rules.day]"
+                            class="date-field"
+                            hide-spin-buttons
                         ></v-text-field>
-                    </td>
-                    <!-- Amount Field -->
-                    <!-- Changed to type=text to better handle decimal places.-->
-                    <td>
+
+                        <v-select
+                            v-model="expense.month"
+                            :items="months"
+                            label="Month"
+                            :rules="[rules.month]"
+                            class="date-field"
+                        ></v-select>
+
                         <v-text-field
+                            v-model="expense.year"
+                            type="number"
+                            label="Year"
+                            :rules="[rules.year]"
+                            class="date-field"
+                            hide-spin-buttons
+                        ></v-text-field>
+
+                        <v-btn small @click="setCurrentDate(expense)" class="today-btn">Today</v-btn>
+                    </div>
+
+                    <v-text-field
                         v-model="expense.amount"
                         type="text"
+                        label="Amount"
                         :rules="[rules.amount]"
-                        class="input-field .input-field--amount"
                         :prepend-inner-icon="'mdi-currency-usd'"
-                        ></v-text-field>
-                    </td>
-                    <!-- Expense Category Dropdown -->
-                    <td>
+                        class="mb-2"
+                    ></v-text-field>
+
                     <v-select
                         v-model="expense.category"
                         :items="categories"
+                        label="Category"
                         :rules="[rules.category]"
-                        class="input-field .input-field--category"
+                        class="mb-2"
                     ></v-select>
-                    </td>
-                    <!-- Additional Notes Field -->
-                    <td>
+
                     <v-text-field
                         v-model="expense.notes"
-                        class="input-field .input-field--additionalnotes"
+                        label="Notes"
+                        class="mb-2"
                     ></v-text-field>
-                    </td>
-                    <!-- current date button-->
-                    <td>
-                    <v-btn small @click="setCurrentDate(expense)">Today</v-btn>
-                    </td>
-                </tr>
-            </tbody>
-            </v-table>
+
+                    <v-divider class="my-4"></v-divider>
+                </div>
+            </div>
+
             <v-row justify="center" class="button-row">
                 <v-col cols="auto">
                     <v-btn class="mx-2" type="button" @click="addRow">Add Row</v-btn>
@@ -120,6 +197,114 @@
     </v-container>
 </template>
 
+<style scoped>
+.expenses-header {
+    margin-bottom: 20px;
+}
+
+.tight-table {
+    table-layout: fixed;
+    width: 100%;
+    border-radius: 12px;
+}
+
+/* Column width definitions for desktop view */
+.column-scope { width: 20%; }
+.column-day { width: 8%; }
+.column-month { width: 12%; }
+.column-year { width: 8%; }
+.column-amount { width: 12%; }
+.column-category { width: 20%; }
+.column-notes { width: 15%; }
+.column-set-date { width: 5%; }
+
+.text-success {
+    color: darkgreen;
+}
+
+.text-error {
+    color: red;
+}
+
+/* Tight spacing for table cells */
+.tight-table th,
+.tight-table td {
+    padding: 4px 8px !important;
+}
+
+/* Input field styles */
+.input-field {
+    margin: 0;
+    padding: 4px 0;
+}
+
+/* Prevent input fields from growing too large 
+.input-field :deep(.v-field__input) {
+    min-height: 32px !important;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+} */
+
+/* Mobile view styles */
+.mobile-expense-form {
+    margin-bottom: 16px;
+    padding: 16px;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+}
+
+.date-fields {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(70px, 1fr));
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.date-field {
+    min-width: 70px;
+}
+
+.today-button-cell {
+    vertical-align: middle;
+    height: 100%;
+    padding-top: 12px !important; /* Adjust based on your specific needs */
+    margin: 0;
+    /* Ensure the button height matches other elements */
+    height: 32px;
+}
+
+.today-btn {
+    align-self: center;
+    height:40px;
+    margin-bottom:15px;
+}
+
+/* Button row spacing */
+.button-row {
+    margin-top: 16px;
+}
+
+/* Rounded box styling */
+.rounded-box-embed {
+    background-color: #ffffffe3;
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Utility classes */
+.mb-2 {
+    margin-bottom: 8px;
+}
+
+.my-4 {
+    margin-top: 16px;
+    margin-bottom: 16px;
+}
+
+
+</style>
 <script>
 import { ref, onMounted, watch } from 'vue';
 
@@ -402,63 +587,3 @@ export default {
     }
 };
 </script>
-
-<style scoped>
-
-.expenses-header {
-  margin-bottom: 20px;
-}
-
-.expenses-header {
-  margin-bottom: 20px;
-}
-
-.tight-table {
-  table-layout: fixed;
-  width: 100%;
-  border-radius: 12px; /* Rounded corners */
-}
-
-.text-success {
-    color: darkgreen;
-  }
-
-.text-error {
-    color: red;
-}
-
-/* Reduce the padding for table cells to tighten spacing */
-.tight-table th,
-.tight-table td {
-  padding: 4px 8px !important; /* Reduce padding inside cells */
-}
-
-/* Compact the input fields */
-.input-field {
-  margin: 0; /* Remove margin around input fields */
-  padding: 4px 8px; /* Reduce padding inside the fields */
-}
-
-/* Reduce the height of text fields and selects */
-.v-text-field,
-.v-select {
-  padding-right: 0;
-  padding-left: 0; /* Remove default padding */
-}
-
-/* Adjusting the button to reduce spacing */
-.button-row {
-  margin-top: 10px; /* Reduce top margin for buttons */
-}
-
-
-/* New class for rounded boxes with light background */
-.rounded-box-embed {
-  background-color: #ffffffe3; /* Light grey background for boxes */
-  border-radius: 12px; /* Rounded corners */
-  padding: 20px;
-  margin-bottom: 20px; /* Space between boxes */
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Optional shadow for a subtle 3D effect */
-}
-
-</style>

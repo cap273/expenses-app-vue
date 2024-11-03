@@ -105,5 +105,10 @@ def create_app(test_config=None):
     @app.route("/")
     def serve_vue_app():
         return send_from_directory(app.static_folder, "index.html")
+    
+    # # Check registered routes and their methods
+    # with app.app_context():
+    #     for rule in app.url_map.iter_rules():
+    #         print(f"{rule} -> Methods: {rule.methods}")
 
     return app

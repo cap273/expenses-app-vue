@@ -1,6 +1,7 @@
 <template>
-    <v-container class="household-settings-div">
-      <div class="rounded-box">
+    <div class="page-background">
+    <v-container class="settings-container">
+      <div class="content-box">
         <h2 class="text-h5 mb-6">Household Settings</h2>
 
         <!-- Loader while fetching data -->
@@ -244,6 +245,7 @@
 
 
     </v-container>
+  </div>
   </template>
   
   <script>
@@ -522,22 +524,6 @@
   </script>
   
   <style scoped>
-  .rounded-box {
-    background-color: #f5f5f5;
-    border-radius: 12px;
-    padding: 20px;
-    margin-bottom: 20px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  }
-  
-  .gap-2 {
-    gap: 8px;
-  }
-  
-  .scope-card {
-    position: relative;
-    padding-top: 60px; /* Add space at the top for the buttons */
-  }
   
   .scope-actions {
     position: absolute;
@@ -564,14 +550,6 @@
   
   .member-chip {
     padding: 24px 24px;
-  }
-  
-  .ma-2 {
-    margin: 8px;
-  }
-  
-  .household-settings-div {
-    max-width: 750px;
   }
   
   .text-red {

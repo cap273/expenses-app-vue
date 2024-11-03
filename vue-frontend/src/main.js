@@ -15,6 +15,7 @@ import 'vue-toastification/dist/index.css';
 import { registerPlugins } from '@/plugins';
 import { reactive } from 'vue';
 import './assets/colorModes.css'; // Add this line
+import './assets/app-layout.css'; // app layout
 
 // Create a global state
 export const globalState = reactive({

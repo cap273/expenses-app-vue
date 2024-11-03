@@ -17,8 +17,7 @@ param flaskSecretKey string
 var createExpensesTableScript = '''
   CREATE TABLE expenses (
     ExpenseID INT PRIMARY KEY IDENTITY,
-    AccountID INT NOT NULL, -- User account ID that created this expense
-    ExpenseScope NVARCHAR(255), -- Either 'Joint' or the name of the responsible individual
+    ScopeID INT NOT NULL, -- Change from accountID to scope ID
     PersonID INT, -- Foreign key to the persons table, NULL if it's a joint expense
     Day INT NOT NULL,
     Month NVARCHAR(50) NOT NULL,
@@ -34,7 +33,7 @@ var createExpensesTableScript = '''
     Currency NVARCHAR(50), -- Currency of the transaction
     SuggestedCategory NVARCHAR(255), -- Category suggested by the ML model
     CategoryConfirmed BIT, -- Indicates if the user confirmed the ML-suggested category
-    FOREIGN KEY (AccountID) REFERENCES accounts(AccountID),
+    FOREIGN KEY (ScopeID) REFERENCES scopes(ScopeID),
     FOREIGN KEY (PersonID) REFERENCES persons(PersonID)
   );
 '''
@@ -194,6 +193,87 @@ var createTriggersForDateTrackingScript = '''
   END;
   GO
 '''
+// Add new table creation scripts for scopes and scope_access
+var createScopesTableScript = '''
+  CREATE TABLE scopes (
+    ScopeID INT PRIMARY KEY IDENTITY,
+    ScopeName NVARCHAR(255) NOT NULL,
+    ScopeType NVARCHAR(50) NOT NULL, -- 'personal' or 'household'
+    CreateDate DATE,
+    LastUpdated DATE
+  );
+'''
+
+var createScopeAccessTableScript = '''
+  CREATE TABLE scope_access (
+    AccessID INT PRIMARY KEY IDENTITY,
+    ScopeID INT NOT NULL,
+    AccountID INT NOT NULL,
+    AccessType NVARCHAR(50) NOT NULL, -- 'owner' or 'member'
+    InviteStatus NVARCHAR(50) NOT NULL, -- 'pending', 'accepted', 'rejected'
+    CreateDate DATE,
+    LastUpdated DATE,
+    FOREIGN KEY (ScopeID) REFERENCES scopes(ScopeID),
+    FOREIGN KEY (AccountID) REFERENCES accounts(AccountID)
+  );
+'''
+
+// Add triggers for the new tables
+var additionalTriggers = '''
+  -- Trigger for the 'scopes' table for new records
+  CREATE TRIGGER trg_scopes_insert
+  ON scopes
+  AFTER INSERT
+  AS
+  BEGIN
+      UPDATE scopes
+      SET CreateDate = CAST(GETDATE() AS DATE),
+          LastUpdated = CAST(GETDATE() AS DATE)
+      FROM scopes
+      INNER JOIN inserted i ON scopes.ScopeID = i.ScopeID
+  END;
+  GO
+
+  -- Trigger for the 'scopes' table for updates
+  CREATE TRIGGER trg_scopes_update
+  ON scopes
+  AFTER UPDATE
+  AS
+  BEGIN
+      UPDATE scopes
+      SET LastUpdated = CAST(GETDATE() AS DATE)
+      FROM scopes
+      INNER JOIN inserted i ON scopes.ScopeID = i.ScopeID
+  END;
+  GO
+
+  -- Trigger for the 'scope_access' table for new records
+  CREATE TRIGGER trg_scope_access_insert
+  ON scope_access
+  AFTER INSERT
+  AS
+  BEGIN
+      UPDATE scope_access
+      SET CreateDate = CAST(GETDATE() AS DATE),
+          LastUpdated = CAST(GETDATE() AS DATE)
+      FROM scope_access
+      INNER JOIN inserted i ON scope_access.AccessID = i.AccessID
+  END;
+  GO
+
+  -- Trigger for the 'scope_access' table for updates
+  CREATE TRIGGER trg_scope_access_update
+  ON scope_access
+  AFTER UPDATE
+  AS
+  BEGIN
+      UPDATE scope_access
+      SET LastUpdated = CAST(GETDATE() AS DATE)
+      FROM scope_access
+      INNER JOIN inserted i ON scope_access.AccessID = i.AccessID
+  END;
+  GO
+'''
 
 resource appServicePlan 'Microsoft.Web/serverfarms@2022-09-01' = {
   name: appServicePlanName
@@ -300,8 +380,11 @@ resource sqlDeploymentScript 'Microsoft.Resources/deploymentScripts@2020-10-01' 
       Invoke-Sqlcmd -ServerInstance $env:sqlServerName -Database $env:sqlDatabaseName -Username $env:sqlAdminUsername -Password $env:sqlAdminPassword -Query $env:createCategoriesTableScript
       Invoke-Sqlcmd -ServerInstance $env:sqlServerName -Database $env:sqlDatabaseName -Username $env:sqlAdminUsername -Password $env:sqlAdminPassword -Query $env:createAccountsTableScript
       Invoke-Sqlcmd -ServerInstance $env:sqlServerName -Database $env:sqlDatabaseName -Username $env:sqlAdminUsername -Password $env:sqlAdminPassword -Query $env:createPersonsTableScript
+      Invoke-Sqlcmd -ServerInstance $env:sqlServerName -Database $env:sqlDatabaseName -Username $env:sqlAdminUsername -Password $env:sqlAdminPassword -Query $env:createScopesTableScript
+      Invoke-Sqlcmd -ServerInstance $env:sqlServerName -Database $env:sqlDatabaseName -Username $env:sqlAdminUsername -Password $env:sqlAdminPassword -Query $env:createScopeAccessTableScript
       Invoke-Sqlcmd -ServerInstance $env:sqlServerName -Database $env:sqlDatabaseName -Username $env:sqlAdminUsername -Password $env:sqlAdminPassword -Query $env:createExpensesTableScript
       Invoke-Sqlcmd -ServerInstance $env:sqlServerName -Database $env:sqlDatabaseName -Username $env:sqlAdminUsername -Password $env:sqlAdminPassword -Query $env:createTriggersForDateTrackingScript
+      Invoke-Sqlcmd -ServerInstance $env:sqlServerName -Database $env:sqlDatabaseName -Username $env:sqlAdminUsername -Password $env:sqlAdminPassword -Query $env:additionalTriggers
     '''
     timeout: 'PT1H'
     cleanupPreference: 'OnSuccess'
@@ -339,8 +422,20 @@ resource sqlDeploymentScript 'Microsoft.Resources/deploymentScripts@2020-10-01' 
         secureValue: createPersonsTableScript
       }
       {
+        name: 'createScopesTableScript'
+        secureValue: createScopesTableScript
+      }
+      {
+        name: 'createScopeAccessTableScript'
+        secureValue: createScopeAccessTableScript
+      }
+      {
         name: 'createTriggersForDateTrackingScript'
         secureValue: createTriggersForDateTrackingScript
+      }
+      {
+        name: 'additionalTriggers'
+        secureValue: additionalTriggers
       }
     ]
   }

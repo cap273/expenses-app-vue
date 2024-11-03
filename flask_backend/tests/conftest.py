@@ -1,8 +1,9 @@
 import json
+from datetime import datetime
 import pytest
 from dotenv import load_dotenv, find_dotenv
 from flask_backend.create_app import create_app
-from flask_backend.database.models import Account, Person, db
+from flask_backend.database.models import Account, Person, Scope, ScopeAccess, db
 from flask_backend.utils.db_tools import populate_categories_table
 from flask_backend.database.tables import categories_table, CATEGORY_LIST
 from werkzeug.security import generate_password_hash
@@ -66,3 +67,27 @@ def login_as_test_user(client):
             content_type="application/json",
         )
     return do_login
+
+@pytest.fixture
+def test_scope(app, test_user):
+    scope = Scope(
+        ScopeName=f"{test_user.account_name}'s Personal",
+        ScopeType='personal',
+        CreateDate=datetime.now().date(),
+        LastUpdated=datetime.now().date()
+    )
+    db.session.add(scope)
+    db.session.flush()
+
+    scope_access = ScopeAccess(
+        ScopeID=scope.ScopeID,
+        AccountID=test_user.id,
+        AccessType='owner',
+        InviteStatus='accepted',
+        CreateDate=datetime.now().date(),
+        LastUpdated=datetime.now().date()
+    )
+    db.session.add(scope_access)
+    db.session.commit()
+    
+    return scope

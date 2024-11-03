@@ -1,12 +1,12 @@
 <template>
   <div class="page-background">
-    <v-container>
+    <v-container class="content-container">
         <!-- Chart Component -->
-          <div class="rounded-box">
-      <expense-chart :expenses="expenses" />
+          <div class="content-box">
+            <expense-chart :expenses="processedExpenses" />
           </div>
 
-        <div class="rounded-box">
+        <div class="content-box">
           <div class="search-add-container">
             <v-btn
               color="primary"
@@ -48,7 +48,7 @@
             :headers="headers"
             :items="processedExpenses"
             :search="search"
-            class="elevation-1"
+            class="elevation-1 expense-table"
             item-value="ExpenseID"
             density="compact"
             :no-data-text="'No expenses found'"
@@ -57,6 +57,7 @@
             v-model="selected"
             :options="tableOptions"
             @update:options="updateTableOptions"
+            hover
           >
             <template v-slot:item.ScopeName="{ item }">
               {{ item.ScopeName }} ({{ item.ScopeType }})
@@ -68,10 +69,24 @@
 
             <!-- Scoped Slot for Actions Column -->
             <template v-slot:item.actions="{ item }">
-              <v-btn color="blue" @click="editExpense(item)">
-                <v-icon left>mdi-pencil</v-icon>
-                Edit
-              </v-btn>
+              <div class="action-buttons">
+                <v-btn
+                  icon="mdi-pencil"
+                  size="small"
+                  variant="text"
+                  color="grey-darken-1"
+                  class="me-2 action-button"
+                  @click="editExpense(item)"
+                ></v-btn>
+                <v-btn
+                  icon="mdi-delete"
+                  size="small"
+                  variant="text"
+                  color="grey-darken-1"
+                  class="action-button"
+                  @click="deleteExpense(item.ExpenseID)"
+                ></v-btn>
+              </div>
             </template>
           </v-data-table>
         </div>
@@ -101,27 +116,6 @@
 </template>
 
 <style scoped>
-.chart-container {
-  position: relative;
-  margin-bottom: 20px;
-}
-
-.chart-settings {
-  position: absolute;
-  top: 0;
-  right: 0;
-}
-
-.chart-wrapper {
-  position: relative;
-  height: 400px; /* Adjust height as needed */
-  margin-top: 40px; /* Add margin to prevent overlap with settings icon */
-}
-
-.mb-5 {
-  margin-bottom: 3rem;
-}
-
 .search-add-container {
   display: flex;
   align-items: center;
@@ -130,25 +124,6 @@
 
 .search-bar {
   flex-grow: 1;
-}
-
-.mb-2 {
-  margin-bottom: 16px;
-}
-
-.page-background {
-  background-color: #e0e0e0; /* Slightly darker grey background */
-  min-height: 100vh; /* Ensure the container covers the full viewport height */
-  padding: 20px; /* Add some padding for breathing room */
-}
-
-/* New class for rounded boxes with light background */
-.rounded-box {
-  background-color: #f5f5f5; /* Light grey background for boxes */
-  border-radius: 12px; /* Rounded corners */
-  padding: 20px;
-  margin-bottom: 20px; /* Space between boxes */
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Optional shadow for a subtle 3D effect */
 }
 
 .v-icon {
@@ -169,6 +144,48 @@
   justify-content: center;
 }
 
+/* Add hover effects for the action buttons */
+.v-btn.v-btn--icon {
+  opacity: 0.7;
+  transition: opacity 0.2s ease;
+}
+
+.v-btn.v-btn--icon:hover {
+  opacity: 1;
+}
+
+/* Style the table rows and action buttons */
+.expense-table :deep(.v-data-table__tr) {
+  transition: background-color 0.2s ease;
+}
+
+.expense-table :deep(.v-data-table__tr:hover) {
+  background-color: rgba(0, 0, 0, 0.03);
+}
+
+/* Hide action buttons by default */
+.action-buttons {
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  display: flex;
+  align-items: center;
+}
+
+/* Show action buttons on row hover */
+.expense-table :deep(.v-data-table__tr:hover) .action-buttons {
+  opacity: 1;
+}
+
+/* Button hover effect */
+.action-button {
+  opacity: 0.7;
+  transition: opacity 0.2s ease, background-color 0.2s ease;
+}
+
+.action-button:hover {
+  opacity: 1;
+  background-color: rgba(0, 0, 0, 0.04);
+}
 </style>
 
 
@@ -176,6 +193,7 @@
 import { ref, onMounted, watch, computed, defineComponent, h } from 'vue';
 import InputExpenses from './InputExpenses.vue';
 import ExpenseChart from './ExpenseCharts.vue';
+import { formatDate, parseDateInUTC} from '@/utils/dateUtils.js';
 
 
 export default {
@@ -213,11 +231,36 @@ export default {
         if (data.success) {
           expenses.value = data.expenses;
           console.log('Expenses fetched:', expenses.value);
+          console.log('Fetched Expense Dates:', data.expenses.map(e => new Date(e.ExpenseDate)));
         }
       } catch (error) {
         console.error('Error:', error);
       } finally {
         loading.value = false;
+      }
+    };
+
+    const deleteExpense = async (expenseId) => {
+      try {
+        const response = await fetch("/api/delete_expenses", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ expenseIds: [expenseId] }),
+        });
+
+        if (!response.ok) {
+          throw new Error("Failed to delete expense");
+        }
+
+        const data = await response.json();
+        if (data.success) {
+          // Remove the deleted expense from the list
+          expenses.value = expenses.value.filter(
+            expense => expense.ExpenseID !== expenseId
+          );
+        }
+      } catch (error) {
+        console.error("Error:", error);
       }
     };
 
@@ -285,13 +328,6 @@ export default {
 
     onMounted(fetchExpenses);
 
-    //New method for making the date a nice format
-    const formatDate = (dateString) => {
-      const options = { year: 'numeric', month: 'long', day: 'numeric' };
-      const date = new Date(dateString);
-      return date.toLocaleDateString(undefined, options);
-    };
-
     const tableOptions = ref({
         sortBy: ['ExpenseDate'],
         sortDesc: [true], // Set to true for descending order (newest first)
@@ -306,7 +342,11 @@ export default {
       const processedExpenses = computed(() => {
         return expenses.value.map((expense) => {
           const date = new Date(expense.ExpenseDate);
-          const month = date.toLocaleString('default', { month: 'long', year: 'numeric' });
+          const month = date.toLocaleString('en-US', {
+            month: 'long',
+            year: 'numeric',
+            timeZone: 'UTC',
+          });
           return {
             ...expense,
             ExpenseMonth: month,
@@ -332,6 +372,7 @@ export default {
       processedExpenses,
       showAddExpense,
       toggleAddExpense,
+      deleteExpense,
     };
   },
 };

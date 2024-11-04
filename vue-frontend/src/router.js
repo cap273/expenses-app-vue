@@ -6,7 +6,7 @@ import InputExpenses from './components/InputExpenses.vue';
 import ViewExpenses from './components/ViewExpenses.vue';
 import Profile from '@/components/Profile.vue';
 import HouseholdSettings from '@/components/HouseholdSettings.vue';
-import PlaidLink from './components/PlaidLink.vue';
+import PlaidDashboard from '@/views/PlaidDashboard.vue';
 
 const routes = [
   {
@@ -53,8 +53,8 @@ const routes = [
   },
   {
     path: '/plaid',
-    name: 'PlaidLink',
-    component: PlaidLink,
+    name: 'PlaidDashboard',
+    component: PlaidDashboard,
   },
 ];
 

@@ -237,6 +237,7 @@ def create_link_token():
             )
     # create link token
         response = client.link_token_create(request)
+        print(response)
         return jsonify(response.to_dict())
     except plaid.ApiException as e:
         print(e)
@@ -256,6 +257,7 @@ def create_user_token():
 
         cra_products = ["cra_base_report", "cra_income_insights", "cra_partner_insights"]
         if any(product in cra_products for product in PLAID_PRODUCTS):
+            print("Using CRA products")
             consumer_report_user_identity = ConsumerReportUserIdentity(
                 first_name="Harry",
                 last_name="Potter",
@@ -272,6 +274,7 @@ def create_user_token():
             user_create_request["consumer_report_user_identity"] = consumer_report_user_identity
 
         user_response = client.user_create(user_create_request)
+        print(user_response)
         user_token = user_response['user_token']
         return jsonify(user_response.to_dict())
     except plaid.ApiException as e:
@@ -289,14 +292,22 @@ def get_access_token():
     global access_token
     global item_id
     global transfer_id
-    public_token = request.form['public_token']
     try:
-        exchange_request = ItemPublicTokenExchangeRequest(
-            public_token=public_token)
+        # Parse JSON data from request body
+        data = request.get_json()
+        public_token = data['public_token']
+        
+        # Exchange the public token for an access token and item ID
+        exchange_request = ItemPublicTokenExchangeRequest(public_token=public_token)
         exchange_response = client.item_public_token_exchange(exchange_request)
+        
+        # Store the access token and item ID globally (temporary storage for this example)
         access_token = exchange_response['access_token']
         item_id = exchange_response['item_id']
+        
         return jsonify(exchange_response.to_dict())
+    except KeyError:
+        return jsonify({"error": "public_token not found in request"}), 400
     except plaid.ApiException as e:
         return json.loads(e.body)
 

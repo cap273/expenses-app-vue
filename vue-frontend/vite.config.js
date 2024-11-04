@@ -48,6 +48,16 @@ export default defineConfig({
         target: 'http://localhost:5000', // The URL of your Flask server
         changeOrigin: true,
       }
-    }
+    },
+    sourcemap: false, // Add this to disable source maps in the dev server
+  },
+  // Configuration options for the build process
+  build: {
+    // `sourcemap: false` disables source map generation
+    // Source maps help with debugging by mapping compiled code back to original source code,
+    // but they can cause errors if the source maps for certain libraries are missing.
+    // Disabling source maps prevents these errors in the browser console and is usually
+    // recommended in production to reduce build size and avoid unnecessary warnings.
+    sourcemap: false,
   },
 })

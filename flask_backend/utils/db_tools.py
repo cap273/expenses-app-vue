@@ -3,15 +3,21 @@ import pyodbc
 
 
 def get_database_url(db_username, db_password, db_server, db_name):
+    import platform
     drivers = [driver for driver in pyodbc.drivers()]
     driver = None
 
-    if "ODBC Driver 18 for SQL Server" in drivers:
-        driver = "ODBC+Driver+18+for+SQL+Server"
-    elif "ODBC Driver 17 for SQL Server" in drivers:
-        driver = "ODBC+Driver+17+for+SQL+Server"
-    else:
-        raise Exception("Suitable ODBC driver not found")
+    # Check the operating system
+    if platform.system() == 'Darwin':  # macOS
+        driver_path = "/opt/homebrew/opt/msodbcsql17/lib/libmsodbcsql.17.dylib"
+        driver = driver_path
+    else:  # Windows or other systems
+        if "ODBC Driver 18 for SQL Server" in drivers:
+            driver = "ODBC+Driver+18+for+SQL+Server"
+        elif "ODBC Driver 17 for SQL Server" in drivers:
+            driver = "ODBC+Driver+17+for+SQL+Server"
+        else:
+            raise Exception("Suitable ODBC driver not found")
 
     # Database URL
     return f"mssql+pyodbc://{db_username}:{db_password}@{db_server}/{db_name}?driver={driver}"

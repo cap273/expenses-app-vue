@@ -7,6 +7,7 @@ import ViewExpenses from './components/ViewExpenses.vue';
 import Profile from '@/components/Profile.vue';
 import HouseholdSettings from '@/components/HouseholdSettings.vue';
 import PlaidDashboard from '@/views/PlaidDashboard.vue';
+import Overview from '@/components/Overview.vue';
 
 const routes = [
   {
@@ -55,6 +56,12 @@ const routes = [
     path: '/plaid',
     name: 'PlaidDashboard',
     component: PlaidDashboard,
+  },
+  {
+    path: '/overview',
+    name: 'Overview',
+    component: Overview,
+    meta: { requiresAuth: true },
   },
 ];
 

@@ -23,6 +23,9 @@
            -->
         </template>
           <template v-else>
+          <v-list-item link to="/overview">
+            <v-list-item-title>Overview</v-list-item-title>
+          </v-list-item>
           <v-list-item link to="/view_expenses">
             <v-list-item-title>View Expenses</v-list-item-title>
           </v-list-item>
@@ -70,6 +73,14 @@
               to="/input_expenses"
             >Input Expenses</v-btn>
             -->
+              <v-btn
+              text
+              :class="getButtonClass('Overview')"
+              to="/overview"
+            >
+              <v-icon left>mdi-view-dashboard</v-icon>
+              Overview
+            </v-btn>
             <v-btn
               text
               :class="getButtonClass('ViewExpenses')"

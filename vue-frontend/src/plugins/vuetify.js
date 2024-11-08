@@ -21,12 +21,19 @@ const lightTheme = {
     
     // Action colors
     primary: '#1976D2',
+    'on-primary': '#FFFFFF',
     secondary: '#424242',
+    'on-secondary': '#FFFFFF',
     accent: '#82B1FF',
+    'on-accent': '#000000',
     error: '#FF5252',
+    'on-error': '#FFFFFF',
     info: '#2196F3',
+    'on-info': '#FFFFFF',
     success: '#4CAF50',
+    'on-success': '#FFFFFF',
     warning: '#FB8C00',
+    'on-warning': '#FFFFFF',
     
     // Custom colors for specific components
     'chart-primary': '#1976D2',
@@ -56,12 +63,20 @@ const darkTheme = {
     
     // Action colors
     primary: '#64B5F6',
+    'on-primary': '#000000',
     secondary: '#757575',
+    'on-secondary': '#FFFFFF',
     accent: '#82B1FF',
+    'on-accent': '#000000',
     error: '#FF5252',
+    'on-error': '#000000',
     info: '#2196F3',
+    'on-info': '#FFFFFF',
     success: '#4CAF50',
+    'on-success': '#FFFFFF',
     warning: '#FFB74D',
+    'on-warning': '#000000',
+
     
     // Custom colors for specific components
     'chart-primary': '#64B5F6',

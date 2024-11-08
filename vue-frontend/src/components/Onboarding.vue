@@ -215,7 +215,7 @@
                   color="primary"
                   @click="currentStep++"
                 >
-                  Skip
+                  Next
                 </v-btn>
               </div>
             </v-card>

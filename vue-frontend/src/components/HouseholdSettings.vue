@@ -34,7 +34,8 @@
                         <v-btn
                         v-if="scope.type === 'household'"
                         :color="scope.access_type === 'owner' ? 'error' : 'warning'"
-                        @click="showScopeActionDialog(scope)"
+                        @click="showScopeActionDialog(scope)" 
+                        variant="elevated" 
                         small
                         :prepend-icon="scope.access_type === 'owner' ? 'mdi-delete' : 'mdi-exit-run'"
                         >
@@ -235,6 +236,7 @@
                 :color="selectedScope?.access_type === 'owner' ? 'error' : 'warning'"
                 @click="handleScopeAction"
                 :loading="isProcessingAction"
+                variant="elevated"
               >
                 {{ selectedScope?.access_type === 'owner' ? 'Delete' : 'Leave' }}
               </v-btn>

@@ -200,12 +200,24 @@
 <style scoped>
 .expenses-header {
     margin-bottom: 20px;
+    color: rgb(var(--v-theme-on-background));
 }
+
+.rounded-box-embed {
+    background-color: rgb(var(--v-theme-surface));
+    color: rgb(var(--v-theme-on-surface));
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
 
 .tight-table {
     table-layout: fixed;
     width: 100%;
     border-radius: 12px;
+    background-color: var(--v-surface-color) !important;
 }
 
 /* Column width definitions for desktop view */
@@ -238,18 +250,38 @@
     padding: 4px 0;
 }
 
-/* Prevent input fields from growing too large 
-.input-field :deep(.v-field__input) {
-    min-height: 32px !important;
-    padding-top: 0 !important;
-    padding-bottom: 0 !important;
-} */
+:deep(.v-table) {
+    background-color: rgb(var(--v-theme-surface)) !important;
+  color: rgb(var(--v-theme-on-surface)) !important;
+}
+:deep(.v-table th) {
+  background-color: rgb(var(--v-theme-surface-variant)) !important;
+  color: rgb(var(--v-theme-on-surface-variant)) !important;
+}
+
+:deep(.v-table td) {
+  color: rgb(var(--v-theme-on-surface)) !important;
+}
+
+/* Form fields */
+:deep(.v-text-field .v-field__input),
+:deep(.v-select .v-field__input) {
+  color: rgb(var(--v-theme-on-surface)) !important;
+}
+
+:deep(.v-field__outline__start),
+:deep(.v-field__outline__end),
+:deep(.v-field__outline__notch) {
+  border-color: rgba(var(--v-theme-on-surface), 0.16) !important;
+}
+
 
 /* Mobile view styles */
 .mobile-expense-form {
     margin-bottom: 16px;
     padding: 16px;
-    border: 1px solid #e0e0e0;
+    background-color: rgb(var(--v-theme-surface));
+  border: 1px solid rgb(var(--v-theme-surface-variant));
     border-radius: 8px;
 }
 
@@ -262,6 +294,15 @@
 
 .date-field {
     min-width: 70px;
+}
+
+/* Button styles */
+:deep(.v-btn) {
+  color: var(--v-on-surface-color);
+}
+
+:deep(.v-btn.v-btn--variant-outlined) {
+  border-color: var(--v-primary-color);
 }
 
 .today-button-cell {
@@ -277,6 +318,9 @@
     align-self: center;
     height:40px;
     margin-bottom:15px;
+    background-color: var(--v-surface-variant-color) !important;
+    color: var(--v-on-surface-variant-color) !important;
+
 }
 
 /* Button row spacing */
@@ -284,14 +328,6 @@
     margin-top: 16px;
 }
 
-/* Rounded box styling */
-.rounded-box-embed {
-    background-color: #ffffffe3;
-    border-radius: 12px;
-    padding: 20px;
-    margin-bottom: 20px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
 
 /* Utility classes */
 .mb-2 {

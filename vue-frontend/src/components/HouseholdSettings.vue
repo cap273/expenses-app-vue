@@ -524,6 +524,34 @@
   </script>
   
   <style scoped>
+  .content-box {
+  background-color: rgb(var(--v-theme-surface-variant));
+  color: rgb(var(--v-theme-on-surface));
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Cards */
+:deep(.v-card) {
+  background-color: rgb(var(--v-theme-surface)) !important;
+  border: 1px solid var(--v-surface-variant-color) !important;
+}
+
+:deep(.v-card-text) {
+  color: rgb(var(--v-theme-on-surface)) !important;
+}
+
+:deep(.v-card-title) {
+  color: rgb(var(--v-theme-on-surface)) !important;
+}
+  
+  .scope-card {
+  background-color: rgb(var(--v-theme-surface)) !important;
+  color: rgb(var(--v-theme-on-surface-color)) !important;
+  border: 1px solid rgb(var(--v-theme-surface-variant-color)) !important;
+}
   
   .scope-actions {
     position: absolute;
@@ -550,9 +578,51 @@
   
   .member-chip {
     padding: 24px 24px;
+    background-color: var(--v-surface-variant-color) !important;
+    color: var(--v-on-surface-variant-color) !important;
   }
   
   .text-red {
     color: #ff5252;
   }
+
+/* Form fields */
+:deep(.v-text-field .v-field__input),
+:deep(.v-select .v-field__input) {
+  color: rgb(var(--v-theme-on-surface)) !important;
+}
+
+:deep(.v-field__outline__start),
+:deep(.v-field__outline__end),
+:deep(.v-field__outline__notch) {
+  border-color: rgba(var(--v-theme-on-surface), 0.16) !important;
+}
+
+/* Dialog */
+:deep(.v-dialog .v-card) {
+  background-color: rgb(var(--v-theme-surface)) !important;
+}
+
+/* Lists */
+:deep(.v-list) {
+  background-color: rgb(var(--v-theme-surface)) !important;
+}
+
+:deep(.v-list-item) {
+  color: rgb(var(--v-theme-on-surface)) !important;
+}
+
+:deep(.v-list-item:hover) {
+  background-color: rgb(var(--v-theme-surface-variant)) !important;
+}
+
+/* Chips for HouseholdSettings */
+:deep(.v-chip) {
+  background-color: rgb(var(--v-theme-surface)) !important;
+  color: rgb(var(--v-theme-info)) !important;
+}
+
+.text-grey {
+  color: rgb(var(--v-theme-on-surface-variant)) !important;
+}
   </style>

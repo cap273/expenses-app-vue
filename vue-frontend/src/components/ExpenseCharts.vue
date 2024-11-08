@@ -236,7 +236,7 @@ export default {
       return chartData.value?.labels?.length > 0;
     });
 
-        const chartOptions = computed(() => {
+    const chartOptions = computed(() => {
       if (selectedChartType.value === 'sankey') {
         return {
           responsive: true,
@@ -381,6 +381,8 @@ export default {
 .chart-container {
   position: relative;
   margin-bottom: 20px;
+  background-color: var(--v-surface-color);
+  color: var(--v-on-surface-color);
 }
 
 .chart-controls {
@@ -395,6 +397,8 @@ export default {
   position: relative;
   height: 400px;
   margin-top: 40px;
+  background-color: var(--v-surface-variant-color);
+  border-radius: 8px;
 }
 
 .mb-5 {
@@ -410,7 +414,21 @@ export default {
   justify-content: center;
   align-items: center;
   height: 400px;
-  color: #666;
+  color: var(--v-text-secondary-color);
   font-style: italic;
+}
+
+/* Update v-btn-toggle styles */
+:deep(.v-btn-toggle) {
+  background-color: var(--v-surface-variant-color);
+}
+
+:deep(.v-btn) {
+  color: var(--v-on-surface-variant-color);
+}
+
+:deep(.v-btn--active) {
+  background-color: var(--v-primary-color);
+  color: var(--v-on-primary-color);
 }
 </style>

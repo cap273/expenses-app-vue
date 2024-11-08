@@ -131,6 +131,15 @@
                       <v-icon left>mdi-logout</v-icon>
                       Log Out</v-list-item-title>
                   </v-list-item>
+                  <!-- Theme toggle -->
+                  <v-list-item>
+                    <v-list-item-title class="d-flex align-center py-2">
+                      <v-icon class="mr-2">mdi-theme-light-dark</v-icon>
+                      Theme
+                      <v-spacer></v-spacer>
+                      <ThemeToggle />
+                    </v-list-item-title>
+                  </v-list-item>
                 </v-list>
               </v-menu>
             </v-btn>
@@ -149,8 +158,12 @@ import { ref } from 'vue';
 import { globalState } from '@/main.js';
 import placeholderLogo from '@/assets/placeholder-logo.png';
 import { useRouteClass } from '@/composables/useRouteClass';
+import ThemeToggle from './ThemeToggle.vue'; // Add this import
 
 export default {
+  components: {
+    ThemeToggle // Register the component
+  },
   setup() {
 
     const isLoggingOut = ref(false);  // Indicates whether user is logging out
@@ -263,4 +276,32 @@ export default {
   }
 }
 
+:deep(.v-list-item__content) {
+  display: flex;
+  align-items: center;
+}
+
+:deep(.v-list-item-title) {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+:deep(.v-list-item) {
+  min-height: 48px !important;
+}
+
+:deep(.v-list-item-title) {
+  height: auto !important;
+  padding: 8px 0;
+  display: flex;
+  align-items: center;
+}
+
+/* Ensure the theme toggle button fits properly */
+:deep(.theme-toggle-wrapper) {
+  display: flex;
+  align-items: center;
+  height: 100%;
+}
 </style>

@@ -6,16 +6,16 @@
 
 import '@mdi/font/css/materialdesignicons.css';
 
-import { createApp } from 'vue';
+import { createApp, reactive, watch } from 'vue';
 import { createVuetify } from 'vuetify'
 import App from './App.vue';
 import router from './router';
 import Toast from 'vue-toastification';
 import 'vue-toastification/dist/index.css';
 import { registerPlugins } from '@/plugins';
-import { reactive } from 'vue';
-import './assets/colorModes.css'; // Add this line
+import { themeConfig, useTheme } from './plugins/theme'
 import './assets/app-layout.css'; // app layout
+
 
 // Create a global state
 export const globalState = reactive({
@@ -23,36 +23,35 @@ export const globalState = reactive({
   username: null,
   display_name: null,
   user_email: null, // Add user_email here
-  isDrawerOpen: false // Reactive state for the navigation drawer
+  isDrawerOpen: false, // Reactive state for the navigation drawer
+  isDarkMode: false // Add dark mode state
 });
+
+// Initialize theme management
+const { initTheme, isDark } = useTheme()
 
 const vuetify = createVuetify({
   theme: {
-    defaultTheme: 'light',
+    defaultTheme: isDark.value ? 'dark' : 'light',
     themes: {
-      light: {
-        dark: false,
-        colors: {
-          primary: '#1976D2',
-          secondary: '#424242',
-          background: '#ffffff',
-          surface: '#ffffff',
-        },
-      },
-      dark: {
-        dark: true,
-        colors: {
-          primary: '#64B5F6',
-          secondary: '#757575',
-          background: '#121212',
-          surface: '#1E1E1E',
-        },
-      },
-    },
-  },
+      light: themeConfig.light,
+      dark: themeConfig.dark
+    }
+  }
 })
 
 const app = createApp(App);
+
+// Initialize theme before mounting
+initTheme()
+
+// Watch for theme changes and update global state
+watch(isDark, (newValue) => {
+  globalState.isDarkMode = newValue
+  vuetify.theme.global.name.value = newValue ? 'dark' : 'light'
+})
+
+
 registerPlugins(app);
 
 // Check user's authentication status
@@ -76,7 +75,7 @@ fetch('/api/auth/status')
     }
   });
 
-//app.use(vuetify)
+app.use(vuetify)
 app.use(router);
 app.use(Toast);
 

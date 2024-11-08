@@ -1,10 +1,12 @@
 <template>
   <v-app>
-    <NavBar/>
-    <NavDrawer/>
-    <v-main>
-      <router-view/>
-    </v-main>
+    <v-theme-provider :theme="theme">
+      <NavBar />
+      <NavDrawer/>
+      <v-main>
+        <router-view></router-view>
+      </v-main>
+    </v-theme-provider>
   </v-app>
 </template>
 

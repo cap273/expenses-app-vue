@@ -8,6 +8,7 @@ import Profile from '@/components/Profile.vue';
 import HouseholdSettings from '@/components/HouseholdSettings.vue';
 import PlaidDashboard from '@/views/PlaidDashboard.vue';
 import Overview from '@/components/Overview.vue';
+import Onboarding from './components/Onboarding.vue';
 
 const routes = [
   {
@@ -62,6 +63,12 @@ const routes = [
     name: 'Overview',
     component: Overview,
     meta: { requiresAuth: true },
+  },
+  {
+    path: '/onboarding',
+    name: 'Onboarding',
+    component: Onboarding,
+    meta: { requiresAuth: true }
   },
 ];
 

@@ -250,31 +250,6 @@
     padding: 4px 0;
 }
 
-:deep(.v-table) {
-    background-color: rgb(var(--v-theme-surface)) !important;
-  color: rgb(var(--v-theme-on-surface)) !important;
-}
-:deep(.v-table th) {
-  background-color: rgb(var(--v-theme-surface-variant)) !important;
-  color: rgb(var(--v-theme-on-surface-variant)) !important;
-}
-
-:deep(.v-table td) {
-  color: rgb(var(--v-theme-on-surface)) !important;
-}
-
-/* Form fields */
-:deep(.v-text-field .v-field__input),
-:deep(.v-select .v-field__input) {
-  color: rgb(var(--v-theme-on-surface)) !important;
-}
-
-:deep(.v-field__outline__start),
-:deep(.v-field__outline__end),
-:deep(.v-field__outline__notch) {
-  border-color: rgba(var(--v-theme-on-surface), 0.16) !important;
-}
-
 
 /* Mobile view styles */
 .mobile-expense-form {
@@ -294,15 +269,6 @@
 
 .date-field {
     min-width: 70px;
-}
-
-/* Button styles */
-:deep(.v-btn) {
-  color: var(--v-on-surface-color);
-}
-
-:deep(.v-btn.v-btn--variant-outlined) {
-  border-color: var(--v-primary-color);
 }
 
 .today-button-cell {

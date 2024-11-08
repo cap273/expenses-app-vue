@@ -78,7 +78,6 @@
               :class="getButtonClass('Overview')"
               to="/overview"
             >
-              <v-icon left>mdi-view-dashboard</v-icon>
               Overview
             </v-btn>
             <v-btn

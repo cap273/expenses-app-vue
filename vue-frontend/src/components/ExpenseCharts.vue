@@ -448,13 +448,6 @@ export default {
   border-radius: 8px;
 }
 
-.mb-5 {
-  margin-bottom: 3rem;
-}
-
-.mr-2 {
-  margin-right: 0.5rem;
-}
 
 .no-data-message {
   display: flex;
@@ -465,17 +458,4 @@ export default {
   font-style: italic;
 }
 
-/* Update v-btn-toggle styles */
-:deep(.v-btn-toggle) {
-  background-color: var(--v-surface-variant-color);
-}
-
-:deep(.v-btn) {
-  color: var(--v-on-surface-variant-color);
-}
-
-:deep(.v-btn--active) {
-  background-color: var(--v-primary-color);
-  color: var(--v-on-primary-color);
-}
 </style>

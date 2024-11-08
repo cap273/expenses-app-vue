@@ -13,7 +13,7 @@ import router from './router';
 import Toast from 'vue-toastification';
 import 'vue-toastification/dist/index.css';
 import { registerPlugins } from '@/plugins';
-import { themeConfig, useTheme } from './plugins/theme'
+import vuetify from './plugins/vuetify'
 import './assets/app-layout.css'; // app layout
 
 
@@ -24,33 +24,9 @@ export const globalState = reactive({
   display_name: null,
   user_email: null, // Add user_email here
   isDrawerOpen: false, // Reactive state for the navigation drawer
-  isDarkMode: false // Add dark mode state
 });
 
-// Initialize theme management
-const { initTheme, isDark } = useTheme()
-
-const vuetify = createVuetify({
-  theme: {
-    defaultTheme: isDark.value ? 'dark' : 'light',
-    themes: {
-      light: themeConfig.light,
-      dark: themeConfig.dark
-    }
-  }
-})
-
 const app = createApp(App);
-
-// Initialize theme before mounting
-initTheme()
-
-// Watch for theme changes and update global state
-watch(isDark, (newValue) => {
-  globalState.isDarkMode = newValue
-  vuetify.theme.global.name.value = newValue ? 'dark' : 'light'
-})
-
 
 registerPlugins(app);
 

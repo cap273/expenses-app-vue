@@ -102,6 +102,7 @@ import { Bar, Pie, Chart } from 'vue-chartjs';
 import { Chart as ChartJS, registerables } from 'chart.js';
 import { SankeyController, Flow } from 'chartjs-chart-sankey';
 import { formatDate, parseDateInUTC} from '@/utils/dateUtils.js';
+import { useTheme } from 'vuetify';
 
 ChartJS.register(...registerables);
 ChartJS.register(SankeyController, Flow);
@@ -132,6 +133,8 @@ const formatCurrency = (value) => {
   }).format(value);
 };
 
+
+//Actual setup
 export default {
   name: 'ExpenseChart',
   components: {
@@ -147,6 +150,7 @@ export default {
     },
   },
   setup(props) {
+    const theme = useTheme();
     const selectedTimePeriod = ref('month');
     const isChartMenuOpen = ref(false);
     const isFilterMenuOpen = ref(false);
@@ -237,6 +241,10 @@ export default {
     });
 
     const chartOptions = computed(() => {
+      const isDark = theme.global.current.value.dark;
+      const textColor = isDark ? '#FFFFFF' : '#000000';
+      const gridColor = isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
+
       if (selectedChartType.value === 'sankey') {
         return {
           responsive: true,
@@ -250,7 +258,16 @@ export default {
                   return `${label}: ${value}`;
                 },
               },
+              titleColor: textColor,
+              bodyColor: textColor,
+              backgroundColor: isDark ? '#424242' : '#FFFFFF',
+              borderColor: gridColor,
             },
+            legend: {
+              labels: {
+                color: textColor,
+              }
+            }
           },
         };
       }
@@ -262,8 +279,18 @@ export default {
         plugins: {
           legend: {
             display: selectedChartType.value !== 'bar',
+            labels: {
+              color: textColor,
+              font: {
+                size: 12
+              }
+            }
           },
           tooltip: {
+            titleColor: textColor,
+            bodyColor: textColor,
+            backgroundColor: isDark ? '#424242' : '#FFFFFF',
+            borderColor: gridColor,
             callbacks: {
               label: function(context) {
                 if (selectedChartType.value === 'pie') {
@@ -291,9 +318,29 @@ export default {
         baseOptions.scales = {
           y: {
             beginAtZero: true,
+            grid: {
+              color: gridColor,
+            },
             ticks: {
+              color: textColor,
               callback: function(value) {
                 return formatCurrency(value);
+              }
+            }
+          },
+          x: { 
+            grid: {
+              color: gridColor,
+            },
+            ticks: {
+              color: textColor,
+              callback: function(value) {
+                // Truncate long category names
+                const label = this.getLabelForValue(value);
+                if (label.length > 20) {
+                  return label.substr(0, 17) + '...';
+                }
+                return label;
               }
             }
           }

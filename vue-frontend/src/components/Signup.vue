@@ -112,7 +112,7 @@ export default {
               if (data.authenticated) {
                   globalState.authenticated = true;
                   globalState.username = data.username;
-                  this.$router.push('/view_expenses'); // Redirect to Input Expenses page
+                  this.$router.push('/overview'); // Redirect to Input Expenses page
               } else {
                   this.errorMessage = data.error || 'Account creation failed';
               }

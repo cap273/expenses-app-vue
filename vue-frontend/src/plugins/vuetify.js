@@ -5,6 +5,8 @@ import 'vuetify/styles'
 import { createVuetify } from 'vuetify'
 import * as components from 'vuetify/components'
 import * as directives from 'vuetify/directives'
+import { useStorage } from '@vueuse/core'
+const storedTheme = useStorage('theme-preference', 'light')
 
 // Theme configuration
 const lightTheme = {
@@ -82,7 +84,7 @@ export default createVuetify({
   components,
   directives,
   theme: {
-    defaultTheme: 'light',
+    defaultTheme: storedTheme.value,
     themes: {
       light: lightTheme,
       dark: darkTheme,

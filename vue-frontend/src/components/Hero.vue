@@ -217,7 +217,7 @@
 
 /* New styles for customer quotes */
 .customer-quotes-container {
-    background-color: #f5f5f5; /* Light grey background */
+    background-color: rgb(var(--v-theme-surface-variant)); /* Light grey background */
     padding: 2rem 0;
   }
 

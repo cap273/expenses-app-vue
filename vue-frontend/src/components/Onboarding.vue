@@ -72,16 +72,18 @@
                           </div>
                         </v-form>
                       </div>
-                      <div v-else class="d-flex gap-4">
+                      <div v-else class="d-flex flex-column flex-sm-row gap-4">
                         <v-btn
                           color="primary"
                           @click="showHouseholdForm = true"
+                          class="flex-grow-1"
                         >
                           Create Household
                         </v-btn>
                         <v-btn
                           variant="outlined"
                           @click="currentStep++"
+                          class="flex-grow-1"
                         >
                           Just Personal
                         </v-btn>
@@ -97,17 +99,19 @@
                     <p class="text-body-1 mb-6">
                     How would you like to track your expenses?
                     </p>
-                    <div class="d-flex gap-4">
+                    <div class="d-flex flex-column flex-sm-row gap-4">
                     <v-btn
                         color="primary"
                         @click="openPlaidLink"
                         :loading="plaidLoading"
+                        class="flex-grow-1"
                     >
                         Connect Bank Account
                     </v-btn>
                     <v-btn
                         variant="outlined"
                         @click="currentStep++"
+                        class="flex-grow-1"
                     >
                         Enter Manually
                     </v-btn>

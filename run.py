@@ -8,7 +8,7 @@ if __name__ == "__main__":
     # Determine the host to bind to
     if app.config["FLASK_ENV"] == "development":
         # Use '::' to enable IPv6 and IPv4 binding
-        host = '::' if os.environ.get('REMOTE') else 'localhost'
+        host = '::' if os.environ.get('REMOTE') else '127.0.0.1'
         app.run(debug=True, host=host, port=5000)
     else:
         app.run(debug=False, host='::', port=5000)

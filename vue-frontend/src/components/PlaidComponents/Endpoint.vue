@@ -133,6 +133,14 @@ export default {
 
         const jsonData = await response.json();
 
+        // Log jsonData and all_transactions to the console
+        console.log('Full API Response:', jsonData);
+        if (jsonData.all_transactions) {
+          console.log('All Transactions:', jsonData.all_transactions);
+        } else {
+          console.log('No all_transactions property found in the API response.');
+        }
+
         // Handle API errors
         if (jsonData.error) {
           throw new Error(jsonData.error.message || 'API returned an error');

@@ -5,9 +5,10 @@ import os
 app = create_app()
 
 if __name__ == "__main__":
+    # Determine the host to bind to
     if app.config["FLASK_ENV"] == "development":
-        app.run(debug=True, 
-                host='0.0.0.0' if os.environ.get('REMOTE') else 'localhost',
-                port=5000)
+        # Use '::' to enable IPv6 and IPv4 binding
+        host = '::' if os.environ.get('REMOTE') else 'localhost'
+        app.run(debug=True, host=host, port=5000)
     else:
-        app.run(debug=False)
+        app.run(debug=False, host='::', port=5000)

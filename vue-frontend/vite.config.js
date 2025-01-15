@@ -1,43 +1,45 @@
-// vite.config.js
 import vue from '@vitejs/plugin-vue'
 import vuetify, { transformAssetUrls } from 'vite-plugin-vuetify'
 import ViteFonts from 'unplugin-fonts/vite'
-import { defineConfig } from 'vite'
+import { defineConfig, loadEnv } from 'vite'
 import { fileURLToPath, URL } from 'node:url'
 
-// https://vitejs.dev/config/
-export default defineConfig({
-  plugins: [
-    vue({ template: { transformAssetUrls } }),
-    vuetify({ autoImport: true }),
-    ViteFonts({
-      google: {
-        families: [{
-          name: 'Roboto',
-          styles: 'wght@100;300;400;500;700;900',
-        }],
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, process.cwd())
+
+  return {
+    plugins: [
+      vue({ template: { transformAssetUrls } }),
+      vuetify({ autoImport: true }),
+      ViteFonts({
+        google: {
+          families: [{
+            name: 'Roboto',
+            styles: 'wght@100;300;400;500;700;900',
+          }],
+        },
+      }),
+    ],
+    define: { 'process.env': {} },
+    resolve: {
+      alias: {
+        '@': fileURLToPath(new URL('./src', import.meta.url)),
       },
-    }),
-  ],
-  define: { 'process.env': {} },
-  resolve: {
-    alias: {
-      '@': fileURLToPath(new URL('./src', import.meta.url))
+      extensions: ['.js', '.json', '.jsx', '.mjs', '.ts', '.tsx', '.vue'],
     },
-    extensions: ['.js', '.json', '.jsx', '.mjs', '.ts', '.tsx', '.vue'],
-  },
-  server: {
-    host: process.env.REMOTE ? '0.0.0.0' : 'localhost',  // Use REMOTE env var to determine host
-    port: 3000,
-    proxy: {
-      '/api': {
-        target: 'http://localhost:5000',
-        changeOrigin: true,
-      }
+    server: {
+      host: env.REMOTE === 'true' ? '0.0.0.0' : '127.0.0.1', // Explicitly use IPv4 for local development
+      port: 3000, // The port of the Vue app
+      proxy: {
+        '/api': {
+          target: 'http://127.0.0.1:5000', // Flask server on port 5000 using IPv4
+          changeOrigin: true,
+        },
+      },
+      sourcemap: true, // Enable for debugging
     },
-    sourcemap: false,
-  },
-  build: {
-    sourcemap: false,
-  },
+    build: {
+      sourcemap: true, // Enable for debugging
+    },
+  }
 })

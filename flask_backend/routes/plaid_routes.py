@@ -369,10 +369,14 @@ def get_transactions():
             has_more = response['has_more']
             pretty_print_response(response)
 
-        # Return the 8 most recent transactions
+        # Return the 8 most recent transactions and all transactions
         latest_transactions = sorted(added, key=lambda t: t['date'])[-8:]
+        all_transactions = sorted(added, key=lambda t: t['date'])
+
         return jsonify({
-            'latest_transactions': latest_transactions})
+            'latest_transactions': latest_transactions,
+            'all_transactions': all_transactions
+        })
 
     except plaid.ApiException as e:
         error_response = format_error(e)

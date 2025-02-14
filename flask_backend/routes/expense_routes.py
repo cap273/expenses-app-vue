@@ -1,5 +1,5 @@
 from flask import Blueprint, jsonify, request, current_app
-from sqlalchemy import select, case, text, tuple_
+from sqlalchemy import select, case, text, or_, and_
 from sqlalchemy.sql import null
 from sqlalchemy.exc import SQLAlchemyError
 from datetime import datetime, date
@@ -289,11 +289,22 @@ def submit_plaid_transactions():
             ]
 
             # Execute a single query to find any existing records matching these key pairs
-            existing_rows = conn.execute(
-                expenses_table.select().where(
-                    tuple_(expenses_table.c.PlaidAccountID, expenses_table.c.PlaidTransactionID).in_(transaction_keys)
+            # Build a list of conditions for each (PlaidAccountID, PlaidTransactionID) pair.
+            conditions = [
+                and_(
+                    expenses_table.c.PlaidAccountID == account_id,
+                    expenses_table.c.PlaidTransactionID == transaction_id
                 )
-            ).fetchall()
+                for account_id, transaction_id in transaction_keys
+            ]
+
+            # Only add the WHERE clause if there is at least one condition
+            if conditions:
+                existing_rows = conn.execute(
+                    expenses_table.select().where(or_(*conditions))
+                ).fetchall()
+            else:
+                existing_rows = []
 
             # Create a set of keys for quick lookup
             existing_keys = {

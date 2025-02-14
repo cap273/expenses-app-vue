@@ -130,3 +130,36 @@ export {
   generateToken,
   init,
 };
+
+/**
+ * Submits Plaid transactions to the backend.
+ *
+ * @param {Array} plaidTransactions - Array of Plaid transaction objects.
+ * @param {number|string} scope - The scope ID to associate with these transactions.
+ * @returns {Promise<Object>} The server's JSON response.
+ */
+export async function submitPlaidTransactions(plaidTransactions, scope) {
+  try {
+    const response = await fetch('/api/submit_plaid_transactions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        scope,
+        plaid_transactions: plaidTransactions,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error('Network response was not ok');
+    }
+
+    const responseData = await response.json();
+    console.log('Server response:', responseData);
+    return responseData;
+  } catch (error) {
+    console.error('Error submitting Plaid transactions:', error);
+    throw error;
+  }
+}

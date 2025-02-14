@@ -13,7 +13,7 @@
 
 <script>
 import { ref, onMounted } from 'vue';
-import { usePlaid } from '../../composables/usePlaid';
+import { usePlaid, submitPlaidTransactions } from '../../composables/usePlaid';
 import Table from './Table.vue';
 // Import necessary categories and transformation functions
 import {
@@ -135,10 +135,21 @@ export default {
 
         // Log jsonData and all_transactions to the console
         console.log('Full API Response:', jsonData);
-        if (jsonData.all_transactions) {
-          console.log('All Transactions:', jsonData.all_transactions);
+        if (jsonData.latest_transactions) {
+          console.log('All Transactions:', jsonData.latest_transactions);
+          
+          // After logging, submit the Plaid transactions to the backend.
+          // Replace state.scopeId with the actual scope if needed.
+          const scope = state.scopeId || 1;
+          submitPlaidTransactions(jsonData.latest_transactions, scope)
+            .then(result => {
+              console.log('Plaid transactions submitted successfully:', result);
+            })
+            .catch(err => {
+              console.error('Error submitting Plaid transactions:', err);
+            });
         } else {
-          console.log('No all_transactions property found in the API response.');
+          console.log('No latest_transactions property found in the API response.');
         }
 
         // Handle API errors

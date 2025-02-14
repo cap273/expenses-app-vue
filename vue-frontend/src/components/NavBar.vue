@@ -63,7 +63,6 @@
             <v-btn text href="#features" class="first-nav-button">Features</v-btn>
             <v-btn text href="#pricing">Pricing</v-btn>
             <v-btn text href="#aboutus">About Us - Added by Janusz</v-btn>
-            <v-btn text to="/plaid">Plaid Test</v-btn>
           </template>
           <template v-else>
             <!-- 
@@ -85,6 +84,7 @@
               :class="getButtonClass('ViewExpenses')"
               to="/view_expenses"
             >View Expenses</v-btn>
+            <v-btn text to="/plaid">Plaid Test</v-btn>
           </template>
         </v-col>
 

@@ -19,20 +19,45 @@ var createExpensesTableScript = '''
     ExpenseID INT PRIMARY KEY IDENTITY,
     ScopeID INT NOT NULL, -- Change from accountID to scope ID
     PersonID INT, -- Foreign key to the persons table, NULL if it's a joint expense
-    Day INT NOT NULL,
-    Month NVARCHAR(50) NOT NULL,
-    Year INT NOT NULL,
-    ExpenseDate DATE NOT NULL,
+    Day INT,
+    Month NVARCHAR(50),
+    Year INT,
+    ExpenseDate DATE,
     ExpenseDayOfWeek NVARCHAR(50),
     Amount FLOAT NOT NULL, -- Original unadjusted amount
     AdjustedAmount FLOAT, -- Amount after adjustments like reimbursements
-    ExpenseCategory NVARCHAR(255) NOT NULL,
+    ExpenseCategory NVARCHAR(255),
     AdditionalNotes NVARCHAR(255),
     CreateDate DATE,
     LastUpdated DATE,
     Currency NVARCHAR(50), -- Currency of the transaction
     SuggestedCategory NVARCHAR(255), -- Category suggested by the ML model
     CategoryConfirmed BIT, -- Indicates if the user confirmed the ML-suggested category
+
+    -- Fields added to support Plaid data:
+    PlaidAccountID NVARCHAR(255),                           -- Stores Plaid's "account_id"
+    PlaidTransactionID NVARCHAR(255),                       -- Stores Plaid's "transaction_id"
+    PlaidTransactionType NVARCHAR(255),                     -- Stores Plaid's "transaction_type"
+    PlaidCategoryID NVARCHAR(255),                          -- Stores Plaid's "category_id"
+
+    PlaidAuthorizedDate DATE,                               -- Stores Plaid's "authorized_date"
+    PlaidDate DATE,                                         -- Stores Plaid's "date"
+
+    PlaidAmount FLOAT,                                      -- Stores Plaid's "amount"
+    PlaidCurrencyCode NVARCHAR(10),                         -- Stores Plaid's "iso_currency_code"
+
+    PlaidMerchantLogoURL NVARCHAR(255),                     -- Stores Plaid's "logo_url" 
+    PlaidMerchantEntityID NVARCHAR(255),                    -- Stores Plaid's "merchant_entity_id" 
+    PlaidMerchantName NVARCHAR(255),                        -- Stores Plaid's "merchant_name" 
+    PlaidName NVARCHAR(255),                                -- Stores Plaid's "name" 
+    PlaidPending BIT,                                       -- Stores Plaid's "pending" status
+    PlaidPendingTransactionID NVARCHAR(255),                -- Stores Plaid's "pending_transaction_id"
+
+    PlaidPersonalFinanceCategoryConfidence NVARCHAR(255),   -- Stores Plaid's "personal_finance_category - confidence_level"
+    PlaidPersonalFinanceCategoryDetailed NVARCHAR(255),     -- Stores Plaid's "personal_finance_category - detailed"
+    PlaidPersonalFinanceCategoryPrimary NVARCHAR(255),      -- Stores Plaid's "personal_finance_category - primary"
+    PlaidPersonalFinanceCategoryIconURL NVARCHAR(255),      -- Stores Plaid's "personal_finance_category - icon_rl
+
     FOREIGN KEY (ScopeID) REFERENCES scopes(ScopeID),
     FOREIGN KEY (PersonID) REFERENCES persons(PersonID)
   );

@@ -1,8 +1,9 @@
 from flask import Blueprint, jsonify, request, current_app
-from sqlalchemy import select, case, text
+from sqlalchemy import select, case, text, tuple_
 from sqlalchemy.sql import null
 from sqlalchemy.exc import SQLAlchemyError
 from datetime import datetime, date
+from dateutil import parser
 from flask_login import current_user
 from werkzeug.exceptions import BadRequestKeyError
 
@@ -225,6 +226,173 @@ def submit_new_expenses():
 
     except BadRequestKeyError:
         return jsonify({"success": False, "error": "Invalid request"})
+    
+
+@expense_routes.route("/api/submit_plaid_transactions", methods=["POST"])
+@login_required_api
+def submit_plaid_transactions():
+    """
+    This endpoint accepts a JSON payload with Plaid transactions and saves
+    them into the SQL Server expenses table without duplicating records.
+    
+    Expected JSON format:
+    {
+        "scope": <scope_id>,
+        "plaid_transactions": [
+            {
+                "account_id": "5krA3ABBJdcV1LARAoP1Iw9en5vRzBi5Xryy6",
+                "transaction_id": "DJMkpkLL4gIdaNbEbkKaC7yNxQyEAlF3GNK3V",
+                "transaction_type": "place",
+                "category_id": "13005000",
+                "authorized_date": "Fri, 15 Nov 2024 00:00:00 GMT",
+                "date": "Sat, 16 Nov 2024 00:00:00 GMT",
+                "amount": 89.4,
+                "iso_currency_code": "USD",
+                "logo_url": "https://plaid-category-icons.plaid.com/PFC_ENTERTAINMENT.png",
+                "merchant_entity_id": null,
+                "merchant_name": "FUN",
+                "name": "SparkFun",
+                "pending": false,
+                "pending_transaction_id": null,
+                "personal_finance_category": {
+                    "confidence_level": "LOW",
+                    "detailed": "ENTERTAINMENT_SPORTING_EVENTS_AMUSEMENT_PARKS_AND_MUSEUMS",
+                    "primary": "ENTERTAINMENT"
+                },
+                "personal_finance_category_icon_url": "https://plaid-category-icons.plaid.com/PFC_ENTERTAINMENT.png"
+            },
+            ...
+        ]
+    }
+    """
+    try:
+        data = request.get_json()
+        plaid_transactions = data.get("plaid_transactions")
+        scope = data.get("scope")  # Required to associate the expense with a scope
+
+        if not plaid_transactions or scope is None:
+            return jsonify({
+                "success": False,
+                "error": "Missing required fields: 'scope' or 'plaid_transactions'"
+            }), 400
+
+        counter_inserted = 0
+        counter_skipped = 0
+
+        # Open a connection
+        with current_app.config["ENGINE"].connect() as conn:
+            # Build a list of unique (account_id, transaction_id) pairs from incoming transactions
+            transaction_keys = [
+                (txn.get("account_id"), txn.get("transaction_id"))
+                for txn in plaid_transactions
+                if txn.get("account_id") and txn.get("transaction_id")
+            ]
+
+            # Execute a single query to find any existing records matching these key pairs
+            existing_rows = conn.execute(
+                expenses_table.select().where(
+                    tuple_(expenses_table.c.PlaidAccountID, expenses_table.c.PlaidTransactionID).in_(transaction_keys)
+                )
+            ).fetchall()
+
+            # Create a set of keys for quick lookup
+            existing_keys = {
+                (row.PlaidAccountID, row.PlaidTransactionID) for row in existing_rows
+            }
+
+            # Prepare a list of new transaction records to insert
+            values_to_insert = []
+
+            for txn in plaid_transactions:
+                key = (txn.get("account_id"), txn.get("transaction_id"))
+                if key in existing_keys:
+                    counter_skipped += 1
+                    continue
+
+                # Parse dates using dateutil.parser for flexibility
+                try:
+                    authorized_date_str = txn.get("authorized_date")
+                    plaid_authorized_date = parser.parse(authorized_date_str).date() if authorized_date_str else None
+                except Exception:
+                    plaid_authorized_date = None
+
+                try:
+                    date_str = txn.get("date")
+                    plaid_date = parser.parse(date_str).date() if date_str else None
+                except Exception:
+                    plaid_date = None
+
+                # Determine date components from the parsed date (if available)
+                if plaid_date:
+                    day = plaid_date.day
+                    month = plaid_date.strftime("%B")  # e.g., "November"
+                    year = plaid_date.year
+                    expense_date = plaid_date
+                    expense_day_of_week = plaid_date.strftime("%A")
+                else:
+                    day = month = year = expense_date = expense_day_of_week = None
+
+                # Build a dictionary of values for insertion
+                record = {
+                    "ScopeID": scope,
+                    "PersonID": None,  # Adjust if tying to a specific user
+                    "Day": day,
+                    "Month": month,
+                    "Year": year,
+                    "ExpenseDate": expense_date,
+                    "ExpenseDayOfWeek": expense_day_of_week,
+                    "Amount": txn.get("amount"),
+                    "AdjustedAmount": txn.get("amount"),  # Initially the same as Amount
+                    "ExpenseCategory": None,  # Can be updated later
+                    "AdditionalNotes": None,
+                    "CreateDate": datetime.now().date(),
+                    "LastUpdated": datetime.now().date(),
+                    "Currency": txn.get("iso_currency_code"),
+                    "SuggestedCategory": None,
+                    "CategoryConfirmed": False,
+
+                    # Plaid-specific fields
+                    "PlaidAccountID": txn.get("account_id"),
+                    "PlaidTransactionID": txn.get("transaction_id"),
+                    "PlaidTransactionType": txn.get("transaction_type"),
+                    "PlaidCategoryID": txn.get("category_id"),
+                    "PlaidAuthorizedDate": plaid_authorized_date,
+                    "PlaidDate": plaid_date,
+                    "PlaidAmount": txn.get("amount"),
+                    "PlaidCurrencyCode": txn.get("iso_currency_code"),
+                    "PlaidMerchantLogoURL": txn.get("logo_url"),
+                    "PlaidMerchantEntityID": txn.get("merchant_entity_id"),
+                    "PlaidMerchantName": txn.get("merchant_name"),
+                    "PlaidName": txn.get("name"),
+                    "PlaidPending": txn.get("pending"),
+                    "PlaidPendingTransactionID": txn.get("pending_transaction_id"),
+                    "PlaidPersonalFinanceCategoryConfidence": txn.get("personal_finance_category", {}).get("confidence_level"),
+                    "PlaidPersonalFinanceCategoryDetailed": txn.get("personal_finance_category", {}).get("detailed"),
+                    "PlaidPersonalFinanceCategoryPrimary": txn.get("personal_finance_category", {}).get("primary"),
+                    "PlaidPersonalFinanceCategoryIconURL": txn.get("personal_finance_category_icon_url"),
+                }
+                values_to_insert.append(record)
+                counter_inserted += 1
+
+            # Execute a bulk insert for all new records
+            if values_to_insert:
+                conn.execute(expenses_table.insert(), values_to_insert)
+            conn.commit()
+
+        return jsonify({
+            "success": True,
+            "message": (
+                f"{counter_inserted} new transaction{'s' if counter_inserted != 1 else ''} recorded. "
+                f"{counter_skipped} duplicate transaction{'s' if counter_skipped != 1 else ''} skipped."
+            )
+        })
+
+    except SQLAlchemyError as db_err:
+        current_app.logger.error(db_err)
+        return jsonify({"success": False, "error": "Database error"}), 500
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
 
 @expense_routes.route("/api/delete_expenses", methods=["POST"])
 @login_required_api

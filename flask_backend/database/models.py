@@ -102,3 +102,18 @@ class ScopeAccess(db.Model):
     InviteStatus = db.Column(db.String(50), nullable=False)  # 'pending', 'accepted', 'rejected'
     CreateDate = db.Column(db.Date)
     LastUpdated = db.Column(db.Date)
+
+class PlaidItem(db.Model):
+    __tablename__ = "plaid_items"
+    __table_args__ = {"implicit_returning": False}
+
+    ItemID = db.Column(db.Integer, primary_key=True)
+    ScopeID = db.Column(db.Integer, db.ForeignKey("scopes.ScopeID"), nullable=False)
+    PlaidItemID = db.Column(db.String(255), nullable=False, unique=True)
+    AccessToken = db.Column(db.String(255), nullable=False)
+    SyncToken = db.Column(db.Text, nullable=True)  # Can be null initially
+    InstitutionName = db.Column(db.String(255), nullable=True)
+    InstitutionID = db.Column(db.String(255), nullable=True)
+    LastSynced = db.Column(db.DateTime, nullable=True)
+    CreateDate = db.Column(db.Date)
+    LastUpdated = db.Column(db.Date)

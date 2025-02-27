@@ -1,20 +1,38 @@
-<!-- src/components/Link.vue -->
+<!-- src/components/PlaidComponents/Link.vue -->
 <template>
-  <button @click="openLink" :disabled="!ready">
-    Launch Link
-  </button>
+  <div>
+    <button @click="openLink" :disabled="!ready" class="plaid-link-button">
+      Launch Link
+    </button>
+    
+    <!-- Scope Selector Dialog -->
+    <ScopeSelector
+      :show="showScopeSelector"
+      :public-token="publicTokenValue"
+      @success="handleLinkSuccess"
+      @error="handleLinkError"
+      @close="showScopeSelector = false"
+    />
+  </div>
 </template>
 
 <script>
 import { defineComponent, ref, watch, onMounted } from 'vue';
 import { usePlaid } from '../../composables/usePlaid';
+import ScopeSelector from './ScopeSelector.vue';
 
 export default defineComponent({
   name: 'Link',
-  setup() {
+  components: {
+    ScopeSelector
+  },
+  emits: ['link-success', 'link-error'],
+  setup(props, { emit }) {
     const { state, updateState } = usePlaid();
     const ready = ref(false);
     const isOauth = ref(false);
+    const showScopeSelector = ref(false);
+    const publicTokenValue = ref('');
     let handler = null;
 
     const loadPlaidScript = () => {
@@ -68,56 +86,25 @@ export default defineComponent({
 
       const config = {
         token: state.linkToken,
-        onSuccess: async (public_token, metadata) => {
-          // If the access_token is needed, send public_token to server
-          const exchangePublicTokenForAccessToken = async () => {
-            try {
-                const response = await fetch('/api/set_access_token', {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ public_token: public_token }), // Send JSON data
-              });
-              if (!response.ok) {
-                updateState({
-                  itemId: 'no item_id retrieved',
-                  accessToken: 'no access_token retrieved',
-                  isItemAccess: false,
-                });
-                return;
-              }
-              const data = await response.json();
-              updateState({
-                itemId: data.item_id,
-                accessToken: data.access_token,
-                isItemAccess: true,
-              });
-            } catch (error) {
-              updateState({
-                itemId: 'no item_id retrieved',
-                accessToken: 'no access_token retrieved',
-                isItemAccess: false,
-              });
-            }
-          };
-
-          if (state.isPaymentInitiation) {
-            updateState({ isItemAccess: false });
-          } else if (state.isCraProductsExclusively) {
-            // For CRA products, access_token/public_token exchange is not needed
-            updateState({ isItemAccess: false });
-          } else {
-            await exchangePublicTokenForAccessToken();
-          }
-
-          updateState({ linkSuccess: true });
-          window.history.pushState('', '', '/');
+        onSuccess: (public_token, metadata) => {
+          // Store the public token and show scope selector
+          console.log('Plaid Link success, public token:', public_token);
+          publicTokenValue.value = public_token;
+          showScopeSelector.value = true;
         },
         onExit: (err, metadata) => {
           // Handle the case when a user exits Link
           console.log('User exited Link:', err, metadata);
+          if (err) {
+            emit('link-error', err);
+          }
         },
+        onLoad: () => {
+          console.log('Plaid Link loaded');
+        },
+        onEvent: (eventName, metadata) => {
+          console.log('Plaid Link event:', eventName, metadata);
+        }
       };
 
       if (window.location.href.includes('?oauth_state_id=')) {
@@ -140,6 +127,26 @@ export default defineComponent({
         console.error('Plaid Link is not ready');
       }
     };
+    
+    const handleLinkSuccess = (data) => {
+      console.log('Link success with data:', data);
+      updateState({
+        itemId: data.item_id,
+        accessToken: data.access_token,
+        isItemAccess: true,
+        linkSuccess: true
+      });
+      
+      emit('link-success', data);
+      showScopeSelector.value = false;
+      window.history.pushState('', '', '/');
+    };
+    
+    const handleLinkError = (error) => {
+      console.error('Link error:', error);
+      emit('link-error', error);
+      showScopeSelector.value = false;
+    };
 
     onMounted(async () => {
       try {
@@ -147,6 +154,7 @@ export default defineComponent({
         initializeLink();
       } catch (error) {
         console.error('Error loading Plaid script:', error);
+        emit('link-error', error);
       }
     });
 
@@ -162,14 +170,32 @@ export default defineComponent({
     return {
       openLink,
       ready,
+      showScopeSelector,
+      publicTokenValue,
+      handleLinkSuccess,
+      handleLinkError
     };
   },
 });
 </script>
 
 <style scoped>
-button {
+.plaid-link-button {
   padding: 10px 20px;
   font-size: 16px;
+  background-color: #2c7cff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.plaid-link-button:hover {
+  background-color: #1b5dbd;
+}
+
+.plaid-link-button:disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
 }
 </style>

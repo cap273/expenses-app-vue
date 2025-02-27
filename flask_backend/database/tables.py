@@ -8,7 +8,9 @@ from sqlalchemy import (
     Date,
     Float,
     Boolean,
-    ForeignKey,
+    ForeignKey,   
+    Text, 
+    DateTime, 
 )
 
 metadata = MetaData()
@@ -141,6 +143,23 @@ scope_access_table = Table(
     Column("AccountID", Integer, ForeignKey("accounts.AccountID"), nullable=False),
     Column("AccessType", String(50), nullable=False),
     Column("InviteStatus", String(50), nullable=False),
+    Column("CreateDate", Date),
+    Column("LastUpdated", Date),
+    extend_existing=False,
+    implicit_returning=False,
+)
+
+plaid_items_table = Table(
+    "plaid_items",
+    metadata,
+    Column("ItemID", Integer, primary_key=True),
+    Column("ScopeID", Integer, ForeignKey("scopes.ScopeID"), nullable=False),
+    Column("PlaidItemID", String(255), nullable=False, unique=True),
+    Column("AccessToken", String(255), nullable=False),
+    Column("SyncToken", Text, nullable=True),
+    Column("InstitutionName", String(255), nullable=True),
+    Column("InstitutionID", String(255), nullable=True),
+    Column("LastSynced", DateTime, nullable=True),
     Column("CreateDate", Date),
     Column("LastUpdated", Date),
     extend_existing=False,

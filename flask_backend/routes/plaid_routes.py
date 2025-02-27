@@ -6,8 +6,13 @@ import os
 import datetime as dt
 import json
 import time
-from datetime import date, timedelta
+from datetime import date, timedelta, datetime
 import uuid
+
+# imports for scope assiociation
+from flask_login import current_user
+from flask_backend.utils.session import login_required_api
+from flask_backend.database.models import db, Account, Person, Scope, ScopeAccess, PlaidItem
 
 from dotenv import load_dotenv
 from flask import Flask, request, jsonify
@@ -287,7 +292,10 @@ def create_user_token():
 # https://plaid.com/docs/#exchange-token-flow
 
 
+# Updated and new routes for plaid to support scope integration and properly target user
+# Update the /api/set_access_token route
 @plaid_routes.route('/api/set_access_token', methods=['POST'])
+@login_required_api
 def get_access_token():
     global access_token
     global item_id
@@ -295,7 +303,24 @@ def get_access_token():
     try:
         # Parse JSON data from request body
         data = request.get_json()
-        public_token = data['public_token']
+        public_token = data.get('public_token')
+        scope_id = data.get('scope_id')
+        
+        if not public_token:
+            return jsonify({"error": "public_token is required"}), 400
+
+        if not scope_id:
+            return jsonify({"error": "scope_id is required"}), 400
+            
+        # Validate that user has access to this scope
+        scope_access = ScopeAccess.query.filter_by(
+            ScopeID=scope_id,
+            AccountID=current_user.id,
+            InviteStatus='accepted'
+        ).first()
+        
+        if not scope_access:
+            return jsonify({"error": "You don't have access to this scope"}), 403
         
         # Exchange the public token for an access token and item ID
         exchange_request = ItemPublicTokenExchangeRequest(public_token=public_token)
@@ -305,11 +330,376 @@ def get_access_token():
         access_token = exchange_response['access_token']
         item_id = exchange_response['item_id']
         
-        return jsonify(exchange_response.to_dict())
+        # Get item details with institution information
+        item_request = ItemGetRequest(access_token=access_token)
+        item_response = client.item_get(item_request)
+        
+        institution_id = item_response['item']['institution_id']
+        institution_name = "Unknown Institution"
+        
+        try:
+            # Get institution name if available
+            institution_request = InstitutionsGetByIdRequest(
+                institution_id=institution_id,
+                country_codes=list(map(lambda x: CountryCode(x), PLAID_COUNTRY_CODES))
+            )
+            institution_response = client.institutions_get_by_id(institution_request)
+            institution_name = institution_response['institution'].get('name', institution_name)
+        except plaid.ApiException:
+            # Continue even if we can't get the institution name
+            pass
+        # Check if we already have this Plaid item in our database
+        existing_item = PlaidItem.query.filter_by(PlaidItemID=item_id).first()
+        
+        if existing_item:
+            # Update the existing item if needed
+            existing_item.AccessToken = access_token
+            existing_item.LastUpdated = datetime.now().date()
+            db.session.commit()
+        else:
+            # Store the Plaid item in our database
+            new_item = PlaidItem(
+                ScopeID=scope_id,
+                PlaidItemID=item_id,
+                AccessToken=access_token,
+                InstitutionName=institution_name,
+                InstitutionID=institution_id,
+                LastSynced=datetime.now(),
+                CreateDate=datetime.now().date(),
+                LastUpdated=datetime.now().date()
+            )
+            db.session.add(new_item)
+            db.session.commit()
+        
+        # Return a success response with institution name for frontend display
+        return jsonify({
+            "success": True,
+            "item_id": item_id,
+            "access_token": access_token,  # Note: In production, you shouldn't return the actual token
+            "institution_name": institution_name,
+            "scope_id": scope_id
+        })
+        
     except KeyError:
-        return jsonify({"error": "public_token not found in request"}), 400
+        return jsonify({"error": f"Missing required field: {str(e)}"}), 400
     except plaid.ApiException as e:
-        return json.loads(e.body)
+        error_response = format_error(e)
+        return jsonify(error_response)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+# Add a new route for syncing transactions
+@plaid_routes.route('/api/sync_transactions', methods=['POST'])
+@login_required_api
+def sync_transactions():
+    try:
+        data = request.get_json()
+        item_id = data.get('item_id')
+        
+        if not item_id:
+            return jsonify({"error": "item_id is required"}), 400
+        
+        # Get the plaid item from database
+        plaid_item = PlaidItem.query.filter_by(PlaidItemID=item_id).first()
+        if not plaid_item:
+            return jsonify({"error": "Plaid item not found"}), 404
+            
+        # Verify user has access to the item's scope
+        scope_access = ScopeAccess.query.filter_by(
+            ScopeID=plaid_item.ScopeID,
+            AccountID=current_user.id,
+            InviteStatus='accepted'
+        ).first()
+        
+        if not scope_access:
+            return jsonify({"error": "You don't have access to this scope"}), 403
+            
+        # Set cursor to empty to receive initial updates, or use saved cursor for subsequent syncs
+        cursor = plaid_item.SyncToken or ''
+        
+        # New transaction updates since "cursor"
+        added = []
+        modified = []
+        removed = []  # Removed transaction ids
+        has_more = True
+        
+        # Iterate through each page of new transaction updates for item
+        while has_more:
+            request = TransactionsSyncRequest(
+                access_token=plaid_item.AccessToken,
+                cursor=cursor,
+            )
+            response = client.transactions_sync(request).to_dict()
+            
+            # Update cursor with the new value
+            cursor = response['next_cursor']
+            
+            # Add this page of results
+            added.extend(response['added'])
+            modified.extend(response['modified'])
+            removed.extend(response['removed'])
+            has_more = response['has_more']
+            
+        # Save the cursor for future syncs
+        plaid_item.SyncToken = cursor
+        plaid_item.LastSynced = datetime.now()
+        plaid_item.LastUpdated = datetime.now().date()
+        db.session.commit()
+        
+        # Submit any new transactions to the database
+        if added:
+            # Submit the Plaid transactions to the backend
+            result = submit_plaid_transactions_to_db(added, plaid_item.ScopeID)
+            
+        return jsonify({
+            "success": True,
+            "added": len(added),
+            "modified": len(modified),
+            "removed": len(removed),
+            "cursor": cursor,
+            "institution_name": plaid_item.InstitutionName
+        })
+        
+    except plaid.ApiException as e:
+        error_response = format_error(e)
+        return jsonify(error_response)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+# Add a helper function for transaction submission
+def submit_plaid_transactions_to_db(transactions, scope_id):
+    """
+    Helper function to submit Plaid transactions to the database
+    """
+    new_transactions = 0
+    skipped = 0
+    
+    # Open a connection
+    with current_app.config["ENGINE"].connect() as conn:
+        # Build a list of unique (account_id, transaction_id) pairs from incoming transactions
+        transaction_keys = [
+            (txn.get("account_id"), txn.get("transaction_id"))
+            for txn in transactions
+            if txn.get("account_id") and txn.get("transaction_id")
+        ]
+
+        # Execute a single query to find any existing records matching these key pairs
+        # Build a list of conditions for each (PlaidAccountID, PlaidTransactionID) pair.
+        conditions = [
+            and_(
+                expenses_table.c.PlaidAccountID == account_id,
+                expenses_table.c.PlaidTransactionID == transaction_id
+            )
+            for account_id, transaction_id in transaction_keys
+        ]
+
+        # Only add the WHERE clause if there is at least one condition
+        if conditions:
+            existing_rows = conn.execute(
+                expenses_table.select().where(or_(*conditions))
+            ).fetchall()
+        else:
+            existing_rows = []
+
+        # Create a set of keys for quick lookup
+        existing_keys = {
+            (row.PlaidAccountID, row.PlaidTransactionID) for row in existing_rows
+        }
+
+        # Prepare a list of new transaction records to insert
+        values_to_insert = []
+
+        for txn in transactions:
+            key = (txn.get("account_id"), txn.get("transaction_id"))
+            if key in existing_keys:
+                skipped += 1
+                continue
+
+            # Parse dates using dateutil.parser for flexibility
+            try:
+                authorized_date_str = txn.get("authorized_date")
+                plaid_authorized_date = parser.parse(authorized_date_str).date() if authorized_date_str else None
+            except Exception:
+                plaid_authorized_date = None
+
+            try:
+                date_str = txn.get("date")
+                plaid_date = parser.parse(date_str).date() if date_str else None
+            except Exception:
+                plaid_date = None
+
+            # Determine date components from the parsed date (if available)
+            if plaid_date:
+                day = plaid_date.day
+                month = plaid_date.strftime("%B")  # e.g., "November"
+                year = plaid_date.year
+                expense_date = plaid_date
+                expense_day_of_week = plaid_date.strftime("%A")
+            else:
+                day = month = year = expense_date = expense_day_of_week = None
+
+            # Build a dictionary of values for insertion
+            record = {
+                "ScopeID": scope_id,
+                "PersonID": None,  # Adjust if tying to a specific user
+                "Day": day,
+                "Month": month,
+                "Year": year,
+                "ExpenseDate": expense_date,
+                "ExpenseDayOfWeek": expense_day_of_week,
+                "Amount": txn.get("amount"),
+                "AdjustedAmount": txn.get("amount"),  # Initially the same as Amount
+                "ExpenseCategory": None,  # Can be updated later
+                "AdditionalNotes": None,
+                "CreateDate": datetime.now().date(),
+                "LastUpdated": datetime.now().date(),
+                "Currency": txn.get("iso_currency_code"),
+                "SuggestedCategory": None,
+                "CategoryConfirmed": False,
+
+                # Plaid-specific fields
+                "PlaidAccountID": txn.get("account_id"),
+                "PlaidTransactionID": txn.get("transaction_id"),
+                "PlaidTransactionType": txn.get("transaction_type"),
+                "PlaidCategoryID": txn.get("category_id"),
+                "PlaidAuthorizedDate": plaid_authorized_date,
+                "PlaidDate": plaid_date,
+                "PlaidAmount": txn.get("amount"),
+                "PlaidCurrencyCode": txn.get("iso_currency_code"),
+                "PlaidMerchantLogoURL": txn.get("logo_url"),
+                "PlaidMerchantEntityID": txn.get("merchant_entity_id"),
+                "PlaidMerchantName": txn.get("merchant_name"),
+                "PlaidName": txn.get("name"),
+                "PlaidPending": txn.get("pending"),
+                "PlaidPendingTransactionID": txn.get("pending_transaction_id"),
+                "PlaidPersonalFinanceCategoryConfidence": txn.get("personal_finance_category", {}).get("confidence_level"),
+                "PlaidPersonalFinanceCategoryDetailed": txn.get("personal_finance_category", {}).get("detailed"),
+                "PlaidPersonalFinanceCategoryPrimary": txn.get("personal_finance_category", {}).get("primary"),
+                "PlaidPersonalFinanceCategoryIconURL": txn.get("personal_finance_category_icon_url"),
+            }
+            values_to_insert.append(record)
+            new_transactions += 1
+
+        # Execute a bulk insert for all new records
+        if values_to_insert:
+            conn.execute(expenses_table.insert(), values_to_insert)
+        conn.commit()
+        
+    return {
+        "new_transactions": new_transactions,
+        "skipped": skipped
+    }
+
+# API route to get available scopes for the current user
+
+@plaid_routes.route('/api/get_available_scopes', methods=['GET'])
+@login_required_api
+def get_available_scopes():
+    try:
+        # Join scope_access with scopes to get scope details
+        scope_query = (
+            db.session.query(Scope, ScopeAccess)
+            .join(ScopeAccess, Scope.ScopeID == ScopeAccess.ScopeID)
+            .filter(
+                ScopeAccess.AccountID == current_user.id,
+                ScopeAccess.InviteStatus == 'accepted'
+            )
+            .all()
+        )
+
+        scopes = [{
+            'id': scope.ScopeID,
+            'name': scope.ScopeName,
+            'type': scope.ScopeType,
+            'access_type': access.AccessType
+        } for scope, access in scope_query]
+
+        return jsonify({"success": True, "scopes": scopes})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+# Add a route to get the user's Plaid items
+@plaid_routes.route('/api/get_plaid_items', methods=['GET'])
+@login_required_api
+def get_plaid_items():
+    try:
+        # Get all scopes that the user has access to
+        scope_query = (
+            db.session.query(ScopeAccess.ScopeID)
+            .filter(
+                ScopeAccess.AccountID == current_user.id,
+                ScopeAccess.InviteStatus == 'accepted'
+            )
+        )
+        accessible_scope_ids = [result[0] for result in scope_query.all()]
+
+        # Get all Plaid items associated with these scopes
+        plaid_items = PlaidItem.query.filter(
+            PlaidItem.ScopeID.in_(accessible_scope_ids)
+        ).all()
+        
+        # Build response with item information
+        items_data = []
+        for item in plaid_items:
+            # Get the scope name
+            scope = Scope.query.get(item.ScopeID)
+            scope_name = scope.ScopeName if scope else "Unknown Scope"
+            
+            items_data.append({
+                "item_id": item.PlaidItemID,
+                "institution_name": item.InstitutionName or "Unknown Institution",
+                "scope_id": item.ScopeID,
+                "scope_name": scope_name,
+                "last_synced": item.LastSynced.isoformat() if item.LastSynced else None
+            })
+        
+        return jsonify({
+            "success": True,
+            "items": items_data
+        })
+        
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+# Add this to your flask_backend/routes/plaid_routes.py file
+
+@plaid_routes.route('/api/plaid_status', methods=['GET'])
+@login_required_api
+def get_plaid_status():
+    """Get the status of the user's Plaid connections"""
+    try:
+        # Get all scopes that the user has access to
+        scope_query = (
+            db.session.query(ScopeAccess.ScopeID)
+            .filter(
+                ScopeAccess.AccountID == current_user.id,
+                ScopeAccess.InviteStatus == 'accepted'
+            )
+        )
+        accessible_scope_ids = [result[0] for result in scope_query.all()]
+
+        # Count plaid items
+        plaid_items_count = PlaidItem.query.filter(
+            PlaidItem.ScopeID.in_(accessible_scope_ids)
+        ).count()
+        
+        # Count transactions from Plaid
+        plaid_transactions_count = db.session.query(expenses_table).filter(
+            expenses_table.c.ScopeID.in_(accessible_scope_ids),
+            expenses_table.c.PlaidTransactionID.isnot(None)
+        ).count()
+        
+        return jsonify({
+            "success": True,
+            "has_plaid_connections": plaid_items_count > 0,
+            "plaid_items_count": plaid_items_count,
+            "plaid_transactions_count": plaid_transactions_count
+        })
+        
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
 
 
 # Retrieve ACH or ETF account numbers for an Item

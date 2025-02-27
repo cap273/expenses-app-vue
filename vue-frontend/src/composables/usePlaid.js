@@ -131,6 +131,9 @@ export {
   init,
 };
 
+// This modifies parts of src/composables/usePlaid.js
+// Update the submitPlaidTransactions function to use our new API
+
 /**
  * Submits Plaid transactions to the backend.
  *
@@ -146,7 +149,7 @@ export async function submitPlaidTransactions(plaidTransactions, scope) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        scope,
+        scope_id: scope, // Renamed for consistency with backend
         plaid_transactions: plaidTransactions,
       }),
     });

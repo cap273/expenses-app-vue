@@ -7,6 +7,11 @@ import { fileURLToPath, URL } from 'node:url'
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd())
 
+  // Janusz code for remote server access
+  const isRemote = process.env.REMOTE === '1' || env.VITE_REMOTE === '1';
+  console.log("VITE SERVER HOST:", env.REMOTE);  // Debugging output
+
+
   return {
     plugins: [
       vue({ template: { transformAssetUrls } }),
@@ -28,7 +33,7 @@ export default defineConfig(({ mode }) => {
       extensions: ['.js', '.json', '.jsx', '.mjs', '.ts', '.tsx', '.vue'],
     },
     server: {
-      host: env.REMOTE === 'true' ? '0.0.0.0' : '127.0.0.1', // Explicitly use IPv4 for local development
+      host: isRemote ? '0.0.0.0' :  '127.0.0.1', // Explicitly use IPv4 for local development
       port: 3000, // The port of the Vue app
       proxy: {
         '/api': {

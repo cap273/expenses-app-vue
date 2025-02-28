@@ -14,7 +14,7 @@ from flask_login import current_user
 from flask_backend.utils.session import login_required_api
 from flask_backend.database.models import db, Account, Person, Scope, ScopeAccess, PlaidItem
 from flask_backend.database.tables import expenses_table
-from sqlalchemy import and_, or_
+from sqlalchemy import and_, or_, select
 from dateutil import parser
 
 from dotenv import load_dotenv
@@ -1154,3 +1154,167 @@ def format_error(e):
     response = json.loads(e.body)
     return {'error': {'status_code': e.status, 'display_message':
                       response['error_message'], 'error_code': response['error_code'], 'error_type': response['error_type']}}
+
+# Add these new endpoints to flask_backend/routes/plaid_routes.py
+
+# Replace the existing get_item_accounts function in flask_backend/routes/plaid_routes.py with this improved version
+# Replace the existing get_item_accounts function in flask_backend/routes/plaid_routes.py with this improved version
+
+@plaid_routes.route('/api/get_item_accounts', methods=['GET'])
+@login_required_api
+def get_item_accounts():
+    try:
+        item_id = request.args.get('item_id')
+        if not item_id:
+            return jsonify({"success": False, "error": "item_id parameter is required"}), 400
+        
+        # Verify the plaid item exists and belongs to a scope the user has access to
+        plaid_item = PlaidItem.query.filter_by(PlaidItemID=item_id).first()
+        if not plaid_item:
+            return jsonify({"success": False, "error": "Plaid item not found"}), 404
+        
+        # Verify user has access to the scope
+        scope_access = ScopeAccess.query.filter_by(
+            ScopeID=plaid_item.ScopeID,
+            AccountID=current_user.id,
+            InviteStatus='accepted'
+        ).first()
+        
+        if not scope_access:
+            return jsonify({"success": False, "error": "You don't have access to this item"}), 403
+        
+        try:
+            # Use the stored access token for this specific item
+            request_obj = AccountsBalanceGetRequest(
+                access_token=plaid_item.AccessToken
+            )
+            response = client.accounts_balance_get(request_obj)
+            
+            # Update the last synced timestamp
+            plaid_item.LastSynced = datetime.now()
+            db.session.commit()
+            
+            # Convert the response to a dict first to handle serialization
+            response_dict = response.to_dict()
+            
+            # Extract accounts data and manually build serializable objects
+            accounts = []
+            for account in response_dict.get('accounts', []):
+                # Create a clean, serializable account object
+                account_data = {
+                    'account_id': account.get('account_id'),
+                    'name': account.get('name', 'Unknown Account'),
+                    'official_name': account.get('official_name'),
+                    'balances': {
+                        'available': account.get('balances', {}).get('available'),
+                        'current': account.get('balances', {}).get('current'),
+                        'iso_currency_code': account.get('balances', {}).get('iso_currency_code'),
+                    },
+                    'type': str(account.get('type')) if account.get('type') else None,
+                    'subtype': str(account.get('subtype')) if account.get('subtype') else None,
+                    'mask': account.get('mask')
+                }
+                accounts.append(account_data)
+            
+            return jsonify({
+                "success": True,
+                "accounts": accounts
+            })
+        except plaid.ApiException as e:
+            error_response = format_error(e)
+            print(f"Plaid API error for item {item_id}:", error_response)
+            return jsonify({
+                "success": False, 
+                "error": error_response['error'].get('display_message', "Error fetching accounts")
+            }), 400
+        
+    except Exception as e:
+        print(f"Error in get_item_accounts: {str(e)}")
+        return jsonify({"success": False, "error": str(e)}), 500
+        
+
+# Endpoint to delete a plaid item
+@plaid_routes.route('/api/delete_plaid_item', methods=['POST'])
+@login_required_api
+def delete_plaid_item():
+    try:
+        data = request.get_json()
+        item_id = data.get('item_id')
+        delete_transactions = data.get('delete_transactions', False)
+        
+        if not item_id:
+            return jsonify({"success": False, "error": "item_id is required"}), 400
+        
+        # Find the plaid item
+        plaid_item = PlaidItem.query.filter_by(PlaidItemID=item_id).first()
+        if not plaid_item:
+            return jsonify({"success": False, "error": "Plaid item not found"}), 404
+        
+        # Verify user has access to the scope
+        scope_access = ScopeAccess.query.filter_by(
+            ScopeID=plaid_item.ScopeID,
+            AccountID=current_user.id,
+            InviteStatus='accepted'
+        ).first()
+        
+        if not scope_access:
+            return jsonify({"success": False, "error": "You don't have access to this item"}), 403
+
+        # Store info for response
+        institution_name = plaid_item.InstitutionName
+        scope_id = plaid_item.ScopeID
+        
+        # Begin transaction
+        try:
+            # If requested, delete all transactions associated with this item
+            deleted_count = 0
+            if delete_transactions:
+                with current_app.config["ENGINE"].connect() as conn:
+                    # Get accounts associated with this item
+                    try:
+                        # Use the stored access token to get account IDs
+                        accounts_request = AccountsGetRequest(
+                            access_token=plaid_item.AccessToken
+                        )
+                        accounts_response = client.accounts_get(accounts_request)
+                        account_ids = [account['account_id'] for account in accounts_response['accounts']]
+                        
+                        # Delete expenses with matching PlaidAccountID
+                        if account_ids:
+                            delete_stmt = expenses_table.delete().where(
+                                expenses_table.c.PlaidAccountID.in_(account_ids)
+                            )
+                            result = conn.execute(delete_stmt)
+                            deleted_count = result.rowcount
+                            conn.commit()
+                    except plaid.ApiException:
+                        # If we can't get accounts from Plaid, try deleting by scope
+                        delete_stmt = expenses_table.delete().where(
+                            and_(
+                                expenses_table.c.ScopeID == scope_id,
+                                expenses_table.c.PlaidTransactionID.isnot(None)
+                            )
+                        )
+                        result = conn.execute(delete_stmt)
+                        deleted_count = result.rowcount
+                        conn.commit()
+            
+            # Delete the plaid item from database
+            db.session.delete(plaid_item)
+            db.session.commit()
+            
+            # Optionally, you could also call Plaid's API to remove the item
+            # from Plaid's servers, but this isn't usually necessary
+            
+            return jsonify({
+                "success": True,
+                "message": f"Successfully removed connection to {institution_name}",
+                "deleted_transactions": deleted_count if delete_transactions else 0
+            })
+            
+        except Exception as db_err:
+            db.session.rollback()
+            raise db_err
+            
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500

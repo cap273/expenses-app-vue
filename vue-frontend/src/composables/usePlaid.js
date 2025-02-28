@@ -15,6 +15,7 @@ const initialState = {
   itemId: null,
   isError: false,
   backend: true,
+  scopeId: null, // Scopes in state
   products: ["transactions"],
   linkTokenError: {
     error_type: "",
@@ -29,6 +30,11 @@ const state = reactive({ ...initialState });
 // Define your functions at the module level
 function updateState(newState) {
   Object.assign(state, newState); // Merge the new state values
+}
+
+// Add a function to set the scope ID
+function setScopeId(id) {
+  state.scopeId = id;
 }
 
 // Function to fetch information about products
@@ -118,6 +124,7 @@ export function usePlaid() {
     generateUserToken,
     generateToken,
     init, // Expose init if you want to call it manually
+    setScopeId, //new for scope
   };
 }
 
@@ -129,11 +136,10 @@ export {
   generateUserToken,
   generateToken,
   init,
+  setScopeId, //new for scope
 };
 
-// This modifies parts of src/composables/usePlaid.js
-// Update the submitPlaidTransactions function to use our new API
-
+// Update the submitPlaidTransactions function in usePlaid.js
 /**
  * Submits Plaid transactions to the backend.
  *
@@ -143,23 +149,30 @@ export {
  */
 export async function submitPlaidTransactions(plaidTransactions, scope) {
   try {
+    console.log('Submitting transactions:', { 
+      transactionCount: plaidTransactions.length,
+      scope: scope
+    });
+    
     const response = await fetch('/api/submit_plaid_transactions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        scope_id: scope, // Renamed for consistency with backend
+        scope: scope, // Use 'scope' to match the backend parameter name
         plaid_transactions: plaidTransactions,
       }),
     });
 
     if (!response.ok) {
-      throw new Error('Network response was not ok');
+      const errorText = await response.text();
+      console.error('Error response from server:', errorText);
+      throw new Error(`Network response was not ok: ${response.status} ${response.statusText}`);
     }
 
     const responseData = await response.json();
-    console.log('Server response:', responseData);
+    console.log('Server response from transaction submission:', responseData);
     return responseData;
   } catch (error) {
     console.error('Error submitting Plaid transactions:', error);

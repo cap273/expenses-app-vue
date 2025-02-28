@@ -13,6 +13,9 @@ import uuid
 from flask_login import current_user
 from flask_backend.utils.session import login_required_api
 from flask_backend.database.models import db, Account, Person, Scope, ScopeAccess, PlaidItem
+from flask_backend.database.tables import expenses_table
+from sqlalchemy import and_, or_
+from dateutil import parser
 
 from dotenv import load_dotenv
 from flask import Flask, request, jsonify

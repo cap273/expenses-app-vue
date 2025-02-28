@@ -18,7 +18,7 @@
 
 <script>
 import { defineComponent, ref, watch, onMounted } from 'vue';
-import { usePlaid } from '../../composables/usePlaid';
+import { usePlaid, setScopeId } from '../../composables/usePlaid';
 import ScopeSelector from './ScopeSelector.vue';
 
 export default defineComponent({
@@ -136,6 +136,9 @@ export default defineComponent({
         isItemAccess: true,
         linkSuccess: true
       });
+
+        // Set the scope ID in the Plaid state
+        setScopeId(data.scope_id);
       
       emit('link-success', data);
       showScopeSelector.value = false;

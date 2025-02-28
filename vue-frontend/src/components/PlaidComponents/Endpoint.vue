@@ -36,7 +36,7 @@ export default {
     endpoint: {
       type: String,
       required: true,
-    },
+    }
   },
   setup(props) {
     const { state } = usePlaid();
@@ -136,21 +136,23 @@ export default {
         // Log jsonData and all_transactions to the console
         console.log('Full API Response:', jsonData);
         if (jsonData.latest_transactions) {
-          console.log('All Transactions:', jsonData.latest_transactions);
-          
-          // After logging, submit the Plaid transactions to the backend.
-          // Replace state.scopeId with the actual scope if needed.
-          const scope = state.scopeId || 1;
-          submitPlaidTransactions(jsonData.latest_transactions, scope)
-            .then(result => {
-              console.log('Plaid transactions submitted successfully:', result);
-            })
-            .catch(err => {
-              console.error('Error submitting Plaid transactions:', err);
-            });
-        } else {
-          console.log('No latest_transactions property found in the API response.');
-        }
+        console.log('All Transactions:', jsonData.latest_transactions);
+        
+        // After logging, submit the Plaid transactions to the backend.
+        // Make sure we're using the right scope ID
+        const scope = state.scopeId;
+        console.log('Submitting transactions with scope ID:', scope);
+        
+        submitPlaidTransactions(jsonData.latest_transactions, scope)
+          .then(result => {
+            console.log('Plaid transactions submitted successfully:', result);
+          })
+          .catch(err => {
+            console.error('Error submitting Plaid transactions:', err);
+          });
+      } else {
+        console.log('No latest_transactions property found in the API response.');
+      }
 
         // Handle API errors
         if (jsonData.error) {

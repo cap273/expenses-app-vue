@@ -611,7 +611,6 @@ def bulk_update_expenses():
                 month_num = [i for i, m in enumerate(months, 1) if m == month][0]
                 
                 # Create a date object
-                from datetime import datetime
                 expense_date = datetime(year, month_num, day).date()
                 
                 # Update date fields
@@ -639,7 +638,8 @@ def bulk_update_expenses():
         # Perform the bulk update
         with current_app.config["ENGINE"].connect() as conn:
             # First, make sure all expenses belong to accessible scopes
-            check_query = select([expenses_table.c.ExpenseID]).where(
+            # New style (SQLAlchemy 1.4+):
+            check_query = select(expenses_table.c.ExpenseID).where(
                 and_(
                     expenses_table.c.ExpenseID.in_(expense_ids),
                     expenses_table.c.ScopeID.in_(accessible_scope_ids)

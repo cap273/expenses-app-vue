@@ -76,7 +76,6 @@
               item-key="ExpenseID"
               return-object
               density="compact"
-              :items-per-page="-1"
               :no-data-text="'No expenses found'"
               show-select
               v-model="selectedExpenses"

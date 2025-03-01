@@ -1,6 +1,5 @@
-<!-- PlaidAccountsOverview.vue -->
 <template>
-  <v-card class="mt-4" variant="outlined">
+  <v-card class="mt-6" elevation="1">
     <v-card-title class="d-flex justify-space-between align-center">
       <span>Connected Bank Accounts</span>
       <v-btn
@@ -50,21 +49,28 @@
           sm="6"
           md="4"
         >
-          <v-card variant="outlined">
+          <v-card elevation="2">
             <v-card-item>
-              <v-card-title class="text-subtitle-1">{{ item.institution_name }}</v-card-title>
+              <v-card-title>{{ item.institution_name }}</v-card-title>
               <v-card-subtitle v-if="item.last_synced">
                 Last synced: {{ formatDate(item.last_synced) }}
               </v-card-subtitle>
             </v-card-item>
-
             <v-card-text>
               <div v-if="itemAccountsLoaded[item.item_id]">
-                <div v-if="itemAccounts[item.item_id] && itemAccounts[item.item_id].length > 0">
-                  <div v-for="account in itemAccounts[item.item_id]" :key="account.account_id" class="mb-3">
+                <div
+                  v-if="itemAccounts[item.item_id] && itemAccounts[item.item_id].length"
+                >
+                  <div
+                    v-for="account in itemAccounts[item.item_id]"
+                    :key="account.account_id"
+                    class="mb-3"
+                  >
                     <div class="d-flex justify-space-between align-center">
-                      <div class="text-subtitle-2">{{ account.name }}</div>
-                      <div class="text-h6">{{ formatCurrency(account.balances.available || account.balances.current) }}</div>
+                      <div>{{ account.name }}</div>
+                      <div class="font-weight-medium">
+                        {{ formatCurrency(account.balances.available || account.balances.current) }}
+                      </div>
                     </div>
                     <div class="text-caption text-medium-emphasis">
                       {{ formatAccountType(account.type, account.subtype) }}
@@ -76,18 +82,21 @@
                 </div>
               </div>
               <div v-else class="text-center py-2">
-                <v-progress-circular indeterminate size="24" width="2" color="primary"></v-progress-circular>
+                <v-progress-circular
+                  indeterminate
+                  size="24"
+                  width="2"
+                  color="primary"
+                ></v-progress-circular>
                 <p class="mt-2">Loading accounts...</p>
               </div>
             </v-card-text>
-
             <v-card-actions>
               <v-btn
                 variant="text"
                 color="error"
                 @click="confirmDeleteAccount(item)"
                 :disabled="deletingItemId === item.item_id"
-                class="text-none"
               >
                 <v-icon start>mdi-delete</v-icon>
                 Remove
@@ -99,10 +108,9 @@
                 @click="syncTransactions(item)"
                 :loading="syncingItemId === item.item_id"
                 :disabled="deletingItemId === item.item_id"
-                class="text-none"
               >
                 <v-icon start>mdi-refresh</v-icon>
-                Sync Transactions
+                Sync
               </v-btn>
             </v-card-actions>
           </v-card>
@@ -115,13 +123,17 @@
       <v-card>
         <v-card-title class="text-h5">Remove Bank Connection</v-card-title>
         <v-card-text>
-          <p>Are you sure you want to remove the connection to <strong>{{ selectedItem?.institution_name }}</strong>?</p>
+          <p>
+            Are you sure you want to remove the connection to
+            <strong>{{ selectedItem?.institution_name }}</strong>?
+          </p>
           <v-radio-group v-model="deleteTransactions">
-            <v-radio :value="true" label="Also delete all associated transactions"></v-radio>
-            <v-radio :value="false" label="Keep all transactions in the system"></v-radio>
+            <v-radio :value="true" label="Also delete all associated transactions" />
+            <v-radio :value="false" label="Keep all transactions in the system" />
           </v-radio-group>
           <p class="text-caption text-medium-emphasis mt-2">
-            Note: This only removes the connection from this app. It does not affect your bank account.
+            Note: This only removes the connection from this app. It does not affect
+            your bank account.
           </p>
         </v-card-text>
         <v-card-actions>
@@ -141,11 +153,12 @@
 </template>
 
 <script>
-import { ref, reactive, onMounted } from 'vue';
+import { ref, reactive, onMounted, computed, toRefs } from 'vue';
 
 export default {
   name: 'PlaidAccountsOverview',
-  setup() {
+  emits: ['accounts-fetched'],
+  setup(props, { emit }) {
     const plaidItems = ref([]);
     const itemAccounts = reactive({});
     const itemAccountsLoaded = reactive({});
@@ -153,16 +166,21 @@ export default {
     const error = ref(null);
     const isPlaidConnected = ref(false);
     const syncingItemId = ref(null);
+
+    // For delete workflow
     const showDeleteDialog = ref(false);
     const selectedItem = ref(null);
     const deleteTransactions = ref(false);
     const deletingItemId = ref(null);
     const deletingInProgress = ref(false);
 
-    // Format date for display
+    // We'll track the total of all accounts here,
+    // and then emit it back to the parent
+    const totalBalance = ref(0);
+
+    // Format date
     const formatDate = (dateString) => {
       if (!dateString) return 'Never';
-      
       try {
         const date = new Date(dateString);
         return date.toLocaleString();
@@ -171,101 +189,84 @@ export default {
       }
     };
 
-    // Format currency for display
+    // Format currency
     const formatCurrency = (amount) => {
-      if (amount == null || amount === undefined) return 'Balance unavailable';
-      
+      if (amount == null || amount === undefined) return '$0.00';
       return new Intl.NumberFormat('en-US', {
         style: 'currency',
         currency: 'USD',
-        minimumFractionDigits: 2
+        minimumFractionDigits: 2,
       }).format(amount);
     };
 
-    // Format account type for display
+    // Format account type
     const formatAccountType = (type, subtype) => {
-      const formattedType = type?.charAt(0).toUpperCase() + type?.slice(1) || '';
-      const formattedSubtype = subtype?.charAt(0).toUpperCase() + subtype?.slice(1) || '';
-      
-      if (formattedType && formattedSubtype) {
-        return `${formattedType} - ${formattedSubtype}`;
-      }
-      return formattedSubtype || formattedType || 'Unknown account type';
+      if (!type && !subtype) return 'Unknown';
+      const t = type ? type[0].toUpperCase() + type.slice(1) : '';
+      const st = subtype ? subtype[0].toUpperCase() + subtype.slice(1) : '';
+      if (t && st) return `${t} - ${st}`;
+      return t || st || 'Unknown';
     };
 
-    // Fetch Plaid items and account information
+    // Fetch all Plaid data (items + accounts)
     const fetchPlaidData = async () => {
       try {
         loading.value = true;
         error.value = null;
-        
-        // First, check if user has any Plaid connections
+
+        // Check if user has any Plaid connections
         const statusResponse = await fetch('/api/plaid_status');
         if (!statusResponse.ok) {
           throw new Error('Failed to fetch Plaid status');
         }
-        
         const statusData = await statusResponse.json();
-        console.log("Plaid status:", statusData);
         isPlaidConnected.value = statusData.has_plaid_connections;
-        
+
         if (!isPlaidConnected.value) {
           loading.value = false;
+          // No connected accounts, so totalBalance = 0
+          emit('accounts-fetched', 0);
           return;
         }
-        
-        // Get all connected items
+
+        // Fetch the Plaid items
         const itemsResponse = await fetch('/api/get_plaid_items');
-        if (!itemsResponse.ok) {
-          throw new Error('Failed to fetch Plaid items');
-        }
-        
         const itemsData = await itemsResponse.json();
-        console.log("Plaid items:", itemsData);
-        
         if (!itemsData.success) {
           throw new Error(itemsData.error || 'Failed to fetch Plaid items');
         }
-        
         plaidItems.value = itemsData.items || [];
-        
-        // Initialize loading state for each item
-        plaidItems.value.forEach(item => {
+
+        // Initialize
+        plaidItems.value.forEach((item) => {
+          itemAccounts[item.item_id] = [];
           itemAccountsLoaded[item.item_id] = false;
         });
-        
+
         loading.value = false;
-        
-        // Fetch account details for each item (in parallel)
-        const promises = plaidItems.value.map(item => fetchItemAccounts(item));
+
+        // Get accounts for each item in parallel
+        const promises = plaidItems.value.map((item) => fetchItemAccounts(item));
         await Promise.all(promises);
-        
+
+        // Once all accounts are fetched, recalc the total
+        recalcTotalBalance();
       } catch (err) {
         console.error('Error fetching Plaid data:', err);
         error.value = err.message;
         loading.value = false;
+        emit('accounts-fetched', 0);
       }
     };
 
     // Fetch accounts for a specific item
     const fetchItemAccounts = async (item) => {
       try {
-        console.log(`Fetching accounts for item: ${item.item_id}`);
-        
-        // Clear any existing accounts data
-        itemAccounts[item.item_id] = [];
-        itemAccountsLoaded[item.item_id] = false;
-        
-        // Make API request
         const response = await fetch(`/api/get_item_accounts?item_id=${item.item_id}`);
         const data = await response.json();
-        
-        console.log(`Account data for ${item.item_id}:`, data);
-        
         if (data.success && data.accounts) {
           itemAccounts[item.item_id] = data.accounts;
         } else {
-          console.warn(`No accounts found for item ${item.item_id}`);
           itemAccounts[item.item_id] = [];
         }
       } catch (err) {
@@ -276,35 +277,43 @@ export default {
       }
     };
 
-    // Sync transactions for a specific item
+    // Recalculate total balance from all item accounts
+    const recalcTotalBalance = () => {
+      let sum = 0;
+      plaidItems.value.forEach((item) => {
+        const accounts = itemAccounts[item.item_id] || [];
+        accounts.forEach((acct) => {
+          const bal = acct.balances.available ?? acct.balances.current ?? 0;
+          sum += bal;
+        });
+      });
+      totalBalance.value = sum;
+      // Emit up to parent
+      emit('accounts-fetched', totalBalance.value);
+    };
+
+    // Sync transactions for an item
     const syncTransactions = async (item) => {
       try {
         syncingItemId.value = item.item_id;
-        
         const response = await fetch('/api/sync_transactions', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            item_id: item.item_id
-          })
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ item_id: item.item_id }),
         });
-        
         if (!response.ok) {
           throw new Error('Failed to sync transactions');
         }
-        
         const data = await response.json();
-        if (data.success) {
-          // Show success message
-          alert(`Synced ${data.added} new transactions from ${data.institution_name}`);
-          
-          // Refresh the item data
-          await fetchItemAccounts(item);
-        } else {
+        if (!data.success) {
           throw new Error(data.error || 'Failed to sync transactions');
         }
+        // Show success
+        alert(`Synced ${data.added} new transactions from ${data.institution_name}`);
+        // Refresh the item’s accounts
+        await fetchItemAccounts(item);
+        // Recalc total
+        recalcTotalBalance();
       } catch (err) {
         console.error('Error syncing transactions:', err);
         alert(`Error: ${err.message}`);
@@ -313,14 +322,14 @@ export default {
       }
     };
 
-    // Confirm account deletion
+    // Confirm delete
     const confirmDeleteAccount = (item) => {
       selectedItem.value = item;
-      deleteTransactions.value = false; // Default to keeping transactions
+      deleteTransactions.value = false;
       showDeleteDialog.value = true;
     };
 
-    // Cancel deletion
+    // Cancel
     const cancelDelete = () => {
       showDeleteDialog.value = false;
       selectedItem.value = null;
@@ -329,37 +338,30 @@ export default {
     // Delete account
     const deleteAccount = async () => {
       if (!selectedItem.value) return;
-      
       try {
         deletingInProgress.value = true;
         deletingItemId.value = selectedItem.value.item_id;
-        
+
         const response = await fetch('/api/delete_plaid_item', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             item_id: selectedItem.value.item_id,
-            delete_transactions: deleteTransactions.value
-          })
+            delete_transactions: deleteTransactions.value,
+          }),
         });
-        
         const data = await response.json();
-        
-        if (response.ok && data.success) {
-          // Show success message
-          alert(`Successfully removed connection to ${selectedItem.value.institution_name}`);
-          
-          // Close dialog and refresh data
-          showDeleteDialog.value = false;
-          selectedItem.value = null;
-          
-          // Refresh plaid data
-          await fetchPlaidData();
-        } else {
+
+        if (!response.ok || !data.success) {
           throw new Error(data.error || 'Failed to delete bank connection');
         }
+
+        alert(`Successfully removed connection to ${selectedItem.value.institution_name}`);
+        showDeleteDialog.value = false;
+        selectedItem.value = null;
+
+        // Refresh everything
+        await fetchPlaidData();
       } catch (err) {
         console.error('Error deleting bank connection:', err);
         alert(`Error: ${err.message}`);
@@ -369,10 +371,10 @@ export default {
       }
     };
 
-    // Initialize on component mount
     onMounted(fetchPlaidData);
 
     return {
+      // Data / Refs
       plaidItems,
       itemAccounts,
       itemAccountsLoaded,
@@ -380,29 +382,30 @@ export default {
       error,
       isPlaidConnected,
       syncingItemId,
+      totalBalance,
       showDeleteDialog,
       selectedItem,
       deleteTransactions,
       deletingItemId,
       deletingInProgress,
+
+      // Methods
       formatDate,
       formatCurrency,
       formatAccountType,
+      fetchPlaidData,
+      fetchItemAccounts,
       syncTransactions,
       confirmDeleteAccount,
       cancelDelete,
-      deleteAccount
+      deleteAccount,
     };
-  }
+  },
 };
 </script>
 
 <style scoped>
-.v-card-title {
-  word-break: break-word;
-}
-
-.v-chip {
-  font-size: 0.75rem;
+.v-card {
+  margin-bottom: 16px;
 }
 </style>

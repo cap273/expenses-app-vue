@@ -341,6 +341,7 @@ def submit_plaid_transactions():
                     plaid_date = None
 
                 # Determine date components from the parsed date (if available)
+                # Make sure we always have a valid date
                 if plaid_date:
                     day = plaid_date.day
                     month = plaid_date.strftime("%B")  # e.g., "November"
@@ -348,7 +349,13 @@ def submit_plaid_transactions():
                     expense_date = plaid_date
                     expense_day_of_week = plaid_date.strftime("%A")
                 else:
-                    day = month = year = expense_date = expense_day_of_week = None
+                    # Default to today's date if no date is provided
+                    today = datetime.now().date()
+                    day = today.day
+                    month = today.strftime("%B")
+                    year = today.year
+                    expense_date = today
+                    expense_day_of_week = today.strftime("%A")
 
                 # Build a dictionary of values for insertion
                 record = {
@@ -410,7 +417,6 @@ def submit_plaid_transactions():
         return jsonify({"success": False, "error": "Database error"}), 500
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
-
 
 @expense_routes.route("/api/delete_expenses", methods=["POST"])
 @login_required_api

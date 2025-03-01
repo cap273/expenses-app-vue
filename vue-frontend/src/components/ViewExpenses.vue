@@ -29,16 +29,21 @@
             ></v-text-field>
             
           <!-- Action Buttons -->
-            <v-btn-group v-if="selected.length > 0" style="margin-left:20px;">
-              <v-btn color="warning" @click="openBulkEditDialog" variant="outlined">
-                <v-icon left>mdi-pencil-multiple</v-icon>
-                Bulk Edit
-              </v-btn>
-              <v-btn color="error" @click="deleteSelectedExpenses">
-                <v-icon left>mdi-trash-can</v-icon>
-              </v-btn>
-            </v-btn-group>
-          </div>
+          <v-btn-group v-if="selected && selected.length > 0" style="margin-left:20px;">
+            <v-btn color="warning" @click="openBulkEditDialog" variant="outlined">
+              <v-icon left>mdi-pencil-multiple</v-icon>
+              Bulk Edit ({{ selected.length }})
+            </v-btn>
+            <v-btn color="error" @click="deleteSelectedExpenses">
+              <v-icon left>mdi-trash-can</v-icon>
+            </v-btn>
+          </v-btn-group>
+        </div>
+
+          <!-- Debugging help - Add this somewhere in your template to check selection state -->
+        <div v-if="selected && selected.length > 0" style="display: none;">
+          Selected: {{ selected.length }} items
+        </div>
           
           <!-- Add Expense Form -->
           <div v-if="showAddExpense">
@@ -107,7 +112,7 @@
 
                 <!-- Expense Date Column -->
                 <template v-slot:item.ExpenseDate="{ item }">
-                  {{ formatDate(item.ExpenseDate) }}
+                  {{ formatDate(adjustForTimezone(item.ExpenseDate)) }}
                 </template>
 
                 <!-- Category Column with Icons for Plaid Transactions -->
@@ -437,6 +442,22 @@ export default {
       notes: ''
     });
 
+    // Timezone adjust
+      const adjustForTimezone = (dateString) => {
+        if (!dateString) return new Date();
+        
+        // Parse the date without timezone adjustment
+        const date = new Date(dateString);
+        
+        // Check if the date is valid
+        if (isNaN(date.getTime())) return new Date();
+        
+        // Add timezone offset to counteract browser's automatic timezone conversion
+        // This ensures the date is displayed as intended from the server
+        const timezoneOffset = date.getTimezoneOffset() * 60000;
+        return new Date(date.getTime() + timezoneOffset);
+      };
+
     // Months array for the bulk edit form
     const months = ref(['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']);
 
@@ -482,54 +503,67 @@ export default {
       return true;
     });
 
-    // Group expenses by month
-    const updateMonthGroups = () => {
-      const groupedExpenses = {};
-      
-      // First, create a sorted array of processed expenses
-      const sortedExpenses = [...processedExpenses.value].sort((a, b) => {
-        // For date sorting, convert to Date objects
-        const dateA = new Date(a.ExpenseDate);
-        const dateB = new Date(b.ExpenseDate);
-        return dateB - dateA; // Newest first
-      });
-      
-      // Group by month and year
-      sortedExpenses.forEach((expense) => {
-        const month = expense.ExpenseMonth;
-        if (!groupedExpenses[month]) {
-          groupedExpenses[month] = {
-            month,
-            expenses: [],
-            total: 0,
-            isOpen: true // Default to open
-          };
-        }
-        
-        // Add to group
-        groupedExpenses[month].expenses.push(expense);
-        
-        // Add to total
-        const amount = parseFloat(expense.Amount?.toString().replace(/[^0-9.-]+/g, "") || 0);
-        groupedExpenses[month].total += amount;
-      });
-      
-      // Convert to array and sort by date (newest first)
-      monthGroups.value = Object.values(groupedExpenses).sort((a, b) => {
-        // Extract year and month for comparison
-        const [monthA, yearA] = a.month.split(' ');
-        const [monthB, yearB] = b.month.split(' ');
-        
-        // Compare years first
-        if (yearA !== yearB) {
-          return parseInt(yearB) - parseInt(yearA);
-        }
-        
-        // If years are the same, compare months
-        const monthIndex = (m) => months.value.findIndex(month => month === m);
-        return monthIndex(monthB) - monthIndex(monthA);
-      });
-    };
+// Improved updateMonthGroups function with better sorting
+const updateMonthGroups = () => {
+  const groupedExpenses = {};
+  
+  // First, create a sorted array of processed expenses
+  // Use the ParsedDate property for reliable sorting
+  const sortedExpenses = [...processedExpenses.value].sort((a, b) => {
+    return b.ParsedDate - a.ParsedDate; // Newest first
+  });
+  
+  // Group by month and year
+  sortedExpenses.forEach((expense) => {
+    const month = expense.ExpenseMonth;
+    if (!groupedExpenses[month]) {
+      groupedExpenses[month] = {
+        month,
+        expenses: [],
+        total: 0,
+        isOpen: true // Default to open
+      };
+    }
+    
+    // Add to group
+    groupedExpenses[month].expenses.push(expense);
+    
+    // Add to total - handle negative amounts correctly
+    const amount = parseFloat(expense.Amount?.toString().replace(/[^0-9.-]+/g, "") || 0);
+    groupedExpenses[month].total += amount;
+  });
+  
+  // Convert to array and sort by date (newest first)
+  // Make sure we have a reliable month ordering by using index lookup
+  const monthOrder = {
+    'January': 0, 'February': 1, 'March': 2, 'April': 3, 
+    'May': 4, 'June': 5, 'July': 6, 'August': 7, 
+    'September': 8, 'October': 9, 'November': 10, 'December': 11
+  };
+  
+  monthGroups.value = Object.values(groupedExpenses).sort((a, b) => {
+    // Extract year and month for comparison
+    const [monthA, yearA] = a.month.split(' ');
+    const [monthB, yearB] = b.month.split(' ');
+    
+    // Compare years first
+    const yearDiff = parseInt(yearB) - parseInt(yearA);
+    if (yearDiff !== 0) {
+      return yearDiff;
+    }
+    
+    // If years are the same, compare months using our defined order
+    return monthOrder[monthB] - monthOrder[monthA];
+  });
+  
+  // For debugging, log any unusual month-year combinations
+  monthGroups.value.forEach(group => {
+    const [month, year] = group.month.split(' ');
+    if (parseInt(year) <= 1980) {
+      console.log("Suspicious month group detected:", group.month, "with", group.expenses.length, "expenses");
+    }
+  });
+};
 
     // Toggle month group visibility
     const toggleMonthGroup = (index) => {
@@ -676,7 +710,7 @@ export default {
         const response = await fetch("/api/delete_expenses", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body,
+          body: JSON.stringify({ expenseIds: selectedIds }),
         });
 
         if (!response.ok) {
@@ -685,13 +719,12 @@ export default {
 
         const data = await response.json();
         if (data.success) {
-          // Remove deleted expenses from the list based on ExpenseID
-          expenses.value = expenses.value.filter(
-            expense => !selectedIds.includes(expense.ExpenseID)
-          );
-          selected.value = []; // Clear the selection after deletion
-          // Update month groups
-          updateMonthGroups();
+          // Refresh the expense list
+          await fetchExpenses();
+          // Clear the selection
+          selected.value = [];
+          // Show success message
+          alert(`Successfully deleted ${selectedIds.length} expenses`);
         }
       } catch (error) {
         console.error("Error:", error);
@@ -829,41 +862,61 @@ export default {
       return expense.PlaidMerchantName || expense.PlaidName || 'Uncategorized';
     };
 
-    // Process expenses to add month information
-    const processedExpenses = computed(() => {
-      if (!expenses.value || expenses.value.length === 0) {
-        return [];
-      }
-      
-      return expenses.value.map((expense) => {
-        // Ensure we have a valid date to work with
-        let date;
-        try {
-          date = expense.ExpenseDate ? new Date(expense.ExpenseDate) : new Date();
-          
-          // Check if date is valid (sometimes dates like "1970-01-01" can be problematic)
-          if (isNaN(date.getTime())) {
-            // Default to current date if invalid
-            date = new Date();
-          }
-        } catch (e) {
-          // Default to current date if error
-          date = new Date();
-        }
-        
-        // Get month and year
-        const month = months.value[date.getMonth()];
-        const year = date.getFullYear();
-        
-        // Format as "Month Year"
-        const monthYear = `${month} ${year}`;
-        
-        return {
-          ...expense,
-          ExpenseMonth: monthYear,
-        };
+// More robust processedExpenses computed property to handle edge cases
+const processedExpenses = computed(() => {
+  if (!expenses.value || expenses.value.length === 0) {
+    return [];
+  }
+  
+  return expenses.value.map((expense) => {
+    // Ensure we have a valid date to work with
+    let date;
+    let dateStr = expense.ExpenseDate;
+    
+    try {
+  if (!dateStr || dateStr === "" || dateStr.includes("1970-01-01")) {
+    dateStr = expense.CreateDate || new Date().toISOString();
+  }
+  
+  // Apply timezone adjustment when parsing
+  date = adjustForTimezone(dateStr);
+  
+  // The rest of your code remains the same...
+}catch (e) {
+      // For any errors, default to current date
+      console.error("Date parsing error:", e);
+      date = new Date();
+    }
+    
+    // Get month and year using reliable methods
+    const month = months.value[date.getMonth()];
+    const year = date.getFullYear();
+    
+    // Format as "Month Year"
+    const monthYear = `${month} ${year}`;
+    
+    // Debug log for suspicious dates
+    if (year <= 1980) {
+      console.log("Suspicious date detected:", {
+        original: expense.ExpenseDate,
+        parsed: date.toISOString(),
+        expenseId: expense.ExpenseID
       });
-    });
+    }
+    
+    return {
+      ...expense,
+      ExpenseMonth: monthYear,
+      // Add a parsed date for reliable sorting
+      ParsedDate: date
+    };
+  });
+});
+
+    // Add a watcher to monitor selected items
+    watch(selected, (newVal) => {
+      console.log('Selection changed:', newVal?.length || 0, 'items selected');
+    }, { deep: true });
 
     // Update month groups when processed expenses change
     watch(processedExpenses, () => {
@@ -898,6 +951,7 @@ export default {
       showAddExpense,
       toggleAddExpense,
       deleteExpense,
+      adjustForTimezone,
       // Bulk edit
       isBulkEditDialogOpen,
       bulkEditLoading,

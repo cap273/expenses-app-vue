@@ -471,7 +471,6 @@ def sync_transactions():
         return jsonify({"error": str(e)}), 500
 
 
-# Add a helper function for transaction submission
 def submit_plaid_transactions_to_db(transactions, scope_id):
     """
     Helper function to submit Plaid transactions to the database
@@ -533,7 +532,6 @@ def submit_plaid_transactions_to_db(transactions, scope_id):
             except Exception:
                 plaid_date = None
 
-            # Determine date components from the parsed date (if available)
             # AFTER: Now we ensure every transaction has date information
             if plaid_date:
                 day = plaid_date.day

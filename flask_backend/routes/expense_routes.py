@@ -73,15 +73,22 @@ def get_expenses():
             user_expenses = result.fetchall()
 
         # Convert raw results to a list of dicts with split date
-        expenses = [
-            {
-                **row._asdict(),
-                "Day": row.ExpenseDate.day,
-                "Month": row.ExpenseDate.strftime("%B"),
-                "Year": row.ExpenseDate.year,
-            }
-            for row in user_expenses
-        ]
+        expenses = []
+        for row in user_expenses:
+            expense_dict = row._asdict()
+            
+            # Handle possible None values for ExpenseDate
+            if row.ExpenseDate is not None:
+                expense_dict["Day"] = row.ExpenseDate.day
+                expense_dict["Month"] = row.ExpenseDate.strftime("%B")
+                expense_dict["Year"] = row.ExpenseDate.year
+            else:
+                # Add default values for null dates
+                expense_dict["Day"] = None
+                expense_dict["Month"] = None
+                expense_dict["Year"] = None
+            
+            expenses.append(expense_dict)
 
         # Format the amount in each expense
         for expense in expenses:
@@ -518,3 +525,144 @@ def get_categories_api():
     # Fetch and return all the (default) expense categories
     categories = get_categories(current_app.config["ENGINE"], categories_table)
     return jsonify({"categories": categories})
+
+
+# Add this new endpoint to flask_backend/routes/expense_routes.py
+
+@expense_routes.route("/api/bulk_update_expenses", methods=["POST"])
+@login_required_api
+def bulk_update_expenses():
+    try:
+        data = request.json
+        expense_ids = data.get("expenseIds", [])
+        updates = data.get("updates", {})
+
+        if not expense_ids:
+            return jsonify({"success": False, "message": "No expense IDs provided."})
+        
+        if not updates:
+            return jsonify({"success": False, "message": "No updates provided."})
+
+        # Get user's accessible scope IDs
+        scope_query = (
+            db.session.query(ScopeAccess.ScopeID)
+            .filter(
+                ScopeAccess.AccountID == current_user.id,
+                ScopeAccess.InviteStatus == 'accepted'
+            )
+        )
+        accessible_scope_ids = [result[0] for result in scope_query.all()]
+
+        # Prepare the update values
+        update_values = {}
+        
+        # Update category if provided
+        if 'category' in updates:
+            update_values['ExpenseCategory'] = updates['category']
+        
+        # Update scope if provided
+        if 'scope' in updates:
+            # Verify the scope is accessible to the user
+            if int(updates['scope']) not in accessible_scope_ids:
+                return jsonify({
+                    "success": False, 
+                    "message": "You don't have access to the selected scope."
+                })
+            update_values['ScopeID'] = updates['scope']
+        
+        # Update date if all date components are provided
+        if all(key in updates for key in ['day', 'month', 'year']):
+            try:
+                # Validate and parse the date
+                day = int(updates['day'])
+                month = updates['month']
+                year = int(updates['year'])
+                
+                if not (1 <= day <= 31):
+                    return jsonify({
+                        "success": False,
+                        "message": "Day must be between 1 and 31"
+                    })
+                
+                if not (2000 <= year <= 2050):
+                    return jsonify({
+                        "success": False,
+                        "message": "Year must be between 2000 and 2050"
+                    })
+                
+                months = [
+                    "January", "February", "March", "April", "May", "June",
+                    "July", "August", "September", "October", "November", "December"
+                ]
+                
+                if month not in months:
+                    return jsonify({
+                        "success": False,
+                        "message": "Invalid month"
+                    })
+                
+                # Get month number (1-12) from month name
+                month_num = [i for i, m in enumerate(months, 1) if m == month][0]
+                
+                # Create a date object
+                from datetime import datetime
+                expense_date = datetime(year, month_num, day).date()
+                
+                # Update date fields
+                update_values['Day'] = day
+                update_values['Month'] = month
+                update_values['Year'] = year
+                update_values['ExpenseDate'] = expense_date
+                
+                # Update day of week
+                update_values['ExpenseDayOfWeek'] = expense_date.strftime('%A')
+                
+            except (ValueError, IndexError) as e:
+                return jsonify({
+                    "success": False,
+                    "message": f"Invalid date: {str(e)}"
+                })
+        
+        # Update notes if provided
+        if 'notes' in updates:
+            update_values['AdditionalNotes'] = updates['notes']
+        
+        # Set the last updated date
+        update_values['LastUpdated'] = datetime.now().date()
+        
+        # Perform the bulk update
+        with current_app.config["ENGINE"].connect() as conn:
+            # First, make sure all expenses belong to accessible scopes
+            check_query = select([expenses_table.c.ExpenseID]).where(
+                and_(
+                    expenses_table.c.ExpenseID.in_(expense_ids),
+                    expenses_table.c.ScopeID.in_(accessible_scope_ids)
+                )
+            )
+            result = conn.execute(check_query)
+            valid_expense_ids = [row[0] for row in result]
+            
+            # Identify any expense IDs that don't belong to the user
+            invalid_ids = set(expense_ids) - set(valid_expense_ids)
+            if invalid_ids:
+                return jsonify({
+                    "success": False,
+                    "message": f"You don't have permission to update {len(invalid_ids)} expenses."
+                })
+            
+            # Update the valid expenses
+            update_stmt = expenses_table.update().where(
+                expenses_table.c.ExpenseID.in_(valid_expense_ids)
+            ).values(**update_values)
+            
+            result = conn.execute(update_stmt)
+            conn.commit()
+            
+            return jsonify({
+                "success": True,
+                "message": f"Successfully updated {result.rowcount} expenses."
+            })
+            
+    except Exception as e:
+        print(f"Error in bulk update: {str(e)}")
+        return jsonify({"success": False, "message": str(e)})

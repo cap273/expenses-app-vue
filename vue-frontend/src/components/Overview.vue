@@ -174,6 +174,14 @@ export default {
   setup() {
     // Theme access
     const theme = useTheme();
+    // Add this timezone adjustment function to your setup() function
+    const adjustForTimezone = (dateString) => {
+      if (!dateString) return new Date();
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return new Date();
+      const timezoneOffset = date.getTimezoneOffset() * 60000;
+      return new Date(date.getTime() + timezoneOffset);
+    };
     
     // Add a theme key to force chart re-render on theme change
     const themeKey = ref(0);
@@ -239,52 +247,52 @@ export default {
       }
     };
 
-    // (A) This Month's total
-    const monthlyTotal = computed(() => {
-      const now = new Date();
-      const currentMonth = now.getMonth();
-      const currentYear = now.getFullYear();
-      
-      return expenses.value
-        .filter(e => {
-          const d = new Date(e.ExpenseDate);
-          return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
-        })
-        .reduce((acc, e) => {
-          const amt = parseFloat(String(e.Amount).replace(/[^0-9.-]+/g, '')) || 0;
-          return acc + amt;
-        }, 0);
-    });
+// Update the monthlyTotal computed property
+const monthlyTotal = computed(() => {
+  const now = new Date();
+  const currentMonth = now.getMonth();
+  const currentYear = now.getFullYear();
+  
+  return expenses.value
+    .filter(e => {
+      const d = adjustForTimezone(e.ExpenseDate);
+      return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+    })
+    .reduce((acc, e) => {
+      const amt = parseFloat(String(e.Amount).replace(/[^0-9.-]+/g, '')) || 0;
+      return acc + amt;
+    }, 0);
+});
 
-    // (B) Top 5 Recent Transactions
-    const topFiveTransactions = computed(() => {
-      return [...expenses.value]
-        .sort((a, b) => new Date(b.ExpenseDate) - new Date(a.ExpenseDate))
-        .slice(0, 5);
-    });
+// Update the topFiveTransactions computed property
+const topFiveTransactions = computed(() => {
+  return [...expenses.value]
+    .sort((a, b) => adjustForTimezone(b.ExpenseDate) - adjustForTimezone(a.ExpenseDate))
+    .slice(0, 5);
+});
 
-    // (C) Most Spent Categories (Top 5) for current month
-    const topSpentCategories = computed(() => {
-      const now = new Date();
-      const currentMonth = now.getMonth();
-      const currentYear = now.getFullYear();
-      const catMap = {};
-      
-      expenses.value.forEach(e => {
-        const d = new Date(e.ExpenseDate);
-        if (d.getMonth() === currentMonth && d.getFullYear() === currentYear) {
-          const cat = e.ExpenseCategory || 'Uncategorized';
-          const amt = parseFloat(String(e.Amount).replace(/[^0-9.-]+/g, '')) || 0;
-          catMap[cat] = (catMap[cat] || 0) + amt;
-        }
-      });
-      
-      const catArray = Object.entries(catMap)
-        .map(([category, amount]) => ({ category, amount }))
-        .sort((a, b) => b.amount - a.amount);
-        
-      return catArray.slice(0, 5);
-    });
+// Update topSpentCategories computed property
+const topSpentCategories = computed(() => {
+  const now = new Date();
+  const currentMonth = now.getMonth();
+  const currentYear = now.getFullYear();
+  const catMap = {};
+  
+  expenses.value.forEach(e => {
+    const d = adjustForTimezone(e.ExpenseDate);
+    if (d.getMonth() === currentMonth && d.getFullYear() === currentYear) {
+      const cat = e.ExpenseCategory || 'Uncategorized';
+      const amt = parseFloat(String(e.Amount).replace(/[^0-9.-]+/g, '')) || 0;
+      catMap[cat] = (catMap[cat] || 0) + amt;
+    }
+  });
+  
+  const catArray = Object.entries(catMap)
+    .map(([category, amount]) => ({ category, amount }))
+    .sort((a, b) => b.amount - a.amount);
+    
+  return catArray.slice(0, 5);
+});
 
     // (D) Active scopes summary
     const scopesSummary = computed(() => {
@@ -317,21 +325,20 @@ export default {
 
     // Helper: returns array of length = # of days in that month, each element = daily total
     const getDailyTotals = (year, month) => {
-      const numDays = daysInMonth(year, month);
-      const dailyTotals = Array(numDays).fill(0);
-      
-      expenses.value.forEach(e => {
-        const d = new Date(e.ExpenseDate);
-        if (d.getMonth() === month && d.getFullYear() === year) {
-          const dayIndex = d.getDate() - 1; // zero-based index
-          const amt = parseFloat(String(e.Amount).replace(/[^0-9.-]+/g, "")) || 0;
-          dailyTotals[dayIndex] += amt;
-        }
-      });
-      
-      return dailyTotals;
-    };
-
+  const numDays = daysInMonth(year, month);
+  const dailyTotals = Array(numDays).fill(0);
+  
+  expenses.value.forEach(e => {
+    const d = adjustForTimezone(e.ExpenseDate);
+    if (d.getMonth() === month && d.getFullYear() === year) {
+      const dayIndex = d.getDate() - 1; // zero-based index
+      const amt = parseFloat(String(e.Amount).replace(/[^0-9.-]+/g, "")) || 0;
+      dailyTotals[dayIndex] += amt;
+    }
+  });
+  
+  return dailyTotals;
+};
     // Chart series with actual month names
     const chartSeries = computed(() => {
       if (!expenses.value.length) return [];
@@ -537,10 +544,10 @@ export default {
     };
 
     const formatDate = (dateStr) => {
-      if (!dateStr) return '';
-      const d = new Date(dateStr);
-      return d.toLocaleDateString();
-    };
+  if (!dateStr) return '';
+  const d = adjustForTimezone(dateStr);
+  return d.toLocaleDateString();
+};
 
     // Color-coded amounts
     const amountClass = (val, baseClass = 'text-h5') => {
@@ -573,6 +580,7 @@ export default {
       formatDate,
       amountClass,
       onAccountsFetched,
+      adjustForTimezone,
     };
   },
 };

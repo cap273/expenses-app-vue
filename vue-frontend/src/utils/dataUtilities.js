@@ -81,6 +81,37 @@ const formatCurrency = (number, code) => {
       },
     ];
   };
+
+  //Plaid Bank Helpers
+  export const getBankName = (accountId) => {
+    if (!accountId || !plaidAccounts.value[accountId]) {
+      return 'Unknown Account';
+    }
+    const account = plaidAccounts.value[accountId];
+    return account.institution || 'Unknown Bank';
+  };
+
+  export const getBankAccountDetails = (accountId) => {
+    if (!accountId || !plaidAccounts.value[accountId]) {
+      return 'Unknown Account';
+    }
+    const account = plaidAccounts.value[accountId];
+    const type = account.type
+      ? account.type.charAt(0).toUpperCase() + account.type.slice(1)
+      : '';
+    const subtype = account.subtype
+      ? account.subtype.charAt(0).toUpperCase() + account.subtype.slice(1)
+      : '';
+    const mask = account.mask ? `****${account.mask}` : '';
+    return `${account.name || 'Account'} (${type} ${subtype}) ${mask}`;
+  };
+
+  export const getPlaidCategory = (expense) => {
+    if (expense.PlaidPersonalFinanceCategoryPrimary) {
+      return expense.PlaidPersonalFinanceCategoryPrimary.replace(/_/g, ' ');
+    }
+    return expense.PlaidMerchantName || expense.PlaidName || 'Uncategorized';
+  };
   
   // Export all utilities
   export default {

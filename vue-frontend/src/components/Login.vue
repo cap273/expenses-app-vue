@@ -95,11 +95,6 @@ export default {
 </script>
 
 <style scoped>
-.red--text.text-bold {
-  color: red;
-  font-weight: bold;
-  text-align: center;
-}
 
 .login-btn {
   background-color: #1976d2; /* Filled primary color */

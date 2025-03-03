@@ -13,8 +13,9 @@ import router from './router';
 import Toast from 'vue-toastification';
 import 'vue-toastification/dist/index.css';
 import { registerPlugins } from '@/plugins';
-import vuetify from './plugins/vuetify'
+import vuetify from './plugins/vuetify';
 import './assets/app-layout.css'; // app layout
+import './assets/global.css';
 
 
 // Create a global state

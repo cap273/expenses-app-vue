@@ -154,6 +154,9 @@
 
 <script>
 import { ref, reactive, onMounted, computed, toRefs } from 'vue';
+import { formatDate } from '@/utils/dateUtils';
+import { formatCurrency } from '@/utils/formatUtils';
+
 
 export default {
   name: 'PlaidAccountsOverview',
@@ -177,27 +180,6 @@ export default {
     // We'll track the total of all accounts here,
     // and then emit it back to the parent
     const totalBalance = ref(0);
-
-    // Format date
-    const formatDate = (dateString) => {
-      if (!dateString) return 'Never';
-      try {
-        const date = new Date(dateString);
-        return date.toLocaleString();
-      } catch (e) {
-        return 'Invalid date';
-      }
-    };
-
-    // Format currency
-    const formatCurrency = (amount) => {
-      if (amount == null || amount === undefined) return '$0.00';
-      return new Intl.NumberFormat('en-US', {
-        style: 'currency',
-        currency: 'USD',
-        minimumFractionDigits: 2,
-      }).format(amount);
-    };
 
     // Format account type
     const formatAccountType = (type, subtype) => {

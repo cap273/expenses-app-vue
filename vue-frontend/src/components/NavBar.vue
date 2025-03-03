@@ -150,13 +150,9 @@ import { ref } from 'vue';
 import { globalState } from '@/main.js';
 import placeholderLogo from '@/assets/placeholder-logo.png';
 import { useRouteClass } from '@/composables/useRouteClass';
-// Remove ThemeToggle import
-// import ThemeToggle from './ThemeToggle.vue';
-
 export default {
 components: {
-  // Remove ThemeToggle from components
-  // ThemeToggle
+ 
 },
 setup() {
 

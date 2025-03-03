@@ -164,6 +164,9 @@ import { ref, onMounted, computed, watch } from 'vue'
 import PlaidAccountsOverview from './PlaidComponents/PlaidAccountsOverview.vue'
 import VueApexCharts from 'vue3-apexcharts'
 import { useTheme } from 'vuetify'
+import { formatDate, adjustForTimezone, daysInMonth, getMonthName } from '@/utils/dateUtils';
+import { formatCurrency, amountClass } from '@/utils/formatUtils';
+import { getDailyTotals } from '@/utils/dataUtils';
 
 export default {
   name: 'Overview',
@@ -172,30 +175,21 @@ export default {
     apexchart: VueApexCharts,
   },
   setup() {
-    // Theme access
+    // Theme changes
     const theme = useTheme();
-    // Add this timezone adjustment function to your setup() function
-    const adjustForTimezone = (dateString) => {
-      if (!dateString) return new Date();
-      const date = new Date(dateString);
-      if (isNaN(date.getTime())) return new Date();
-      const timezoneOffset = date.getTimezoneOffset() * 60000;
-      return new Date(date.getTime() + timezoneOffset);
-    };
-    
-    // Add a theme key to force chart re-render on theme change
-    const themeKey = ref(0);
-    const chartLoading = ref(false);
-    
-    // Watch for theme changes
-    watch(() => theme.global.name.value, () => {
-      // Trigger chart reload when theme changes
-      chartLoading.value = true;
-      setTimeout(() => {
-        themeKey.value++; // Increment key to force re-render
-        chartLoading.value = false;
-      }, 100);
-    });
+      // Add a theme key to force chart re-render on theme change
+      const themeKey = ref(0);
+      const chartLoading = ref(false);
+      
+      // Watch for theme changes
+      watch(() => theme.global.name.value, () => {
+        // Trigger chart reload when theme changes
+        chartLoading.value = true;
+        setTimeout(() => {
+          themeKey.value++; // Increment key to force re-render
+          chartLoading.value = false;
+        }, 100);
+      });
     
     // Reactive data
     const loading = ref(true);
@@ -311,18 +305,7 @@ const topSpentCategories = computed(() => {
     // Month Spend Timeline (Line Chart)
     // -----------------------------------
     
-    // Get month names for the chart series
-    const getMonthName = (monthOffset = 0) => {
-      const date = new Date();
-      date.setMonth(date.getMonth() - monthOffset);
-      return date.toLocaleString('default', { month: 'long' });
-    };
-    
-    // Days in month helper
-    const daysInMonth = (year, month) => {
-      return new Date(year, month + 1, 0).getDate();
-    };
-
+ 
     // Helper: returns array of length = # of days in that month, each element = daily total
     const getDailyTotals = (year, month) => {
   const numDays = daysInMonth(year, month);
@@ -530,32 +513,6 @@ const topSpentCategories = computed(() => {
       };
     });
 
-    // -----------------------------------
-    // Formatting helpers
-    // -----------------------------------
-    const formatCurrency = (val) => {
-      if (typeof val === 'string') {
-        val = parseFloat(val.replace(/[^0-9.-]+/g, '')) || 0;
-      }
-      return new Intl.NumberFormat('en-US', {
-        style: 'currency',
-        currency: 'USD'
-      }).format(val);
-    };
-
-    const formatDate = (dateStr) => {
-  if (!dateStr) return '';
-  const d = adjustForTimezone(dateStr);
-  return d.toLocaleDateString();
-};
-
-    // Color-coded amounts
-    const amountClass = (val, baseClass = 'text-h5') => {
-      if (val < 0) return `${baseClass} text-error`;
-      if (val > 0) return `${baseClass} text-success`;
-      return baseClass;
-    };
-
     return {
       // Data
       loading,
@@ -648,10 +605,6 @@ const topSpentCategories = computed(() => {
   text-align: right;
 }
 
-/* Card hover effect */
-.hover-elevate:hover {
-  box-shadow: var(--v-theme-elevation-4);
-}
 
 /* Transaction item styling */
 .transaction-item {
@@ -661,15 +614,6 @@ const topSpentCategories = computed(() => {
 
 .transaction-item:hover {
   background-color: rgba(var(--v-theme-on-surface), 0.05);
-}
-
-/* Text colors for amounts */
-.text-success {
-  color: #4caf50 !important;
-}
-
-.text-error {
-  color: #f44336 !important;
 }
 
 /* Chart container */
@@ -688,10 +632,4 @@ const topSpentCategories = computed(() => {
   width: 100% !important;
 }
 
-/* Chart needs its full height */
-.h-100 {
-  height: 100%;
-}
-
-/* Hide additional tooltips from Apex - remove this since we want to show the tooltips */
 </style>

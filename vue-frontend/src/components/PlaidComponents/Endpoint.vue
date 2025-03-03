@@ -199,5 +199,4 @@ export default {
 </script>
 
 <style scoped>
-/* Same styles as before */
 </style>

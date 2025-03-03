@@ -291,130 +291,23 @@
 </template>
 
 <style scoped>
-.search-add-container {
-  display: flex;
-  align-items: center;
-  margin-bottom: 16px;
-  border-radius: 8px;
-}
-
-.search-bar {
-  flex-grow: 1;
-  background-color: var(--v-surface-variant-color);
-}
-
-.v-icon {
-  transition: transform 0.3s ease;
-}
-
-/* Rotate icon when the form is toggled open */
-.rotate-icon {
-  transform: rotate(135deg);
-}
-
-/* Circular button styling */
-.circle-btn {
-  height: 64px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-/* Hover effects for the action buttons */
-.v-btn.v-btn--icon {
-  opacity: 0.7;
-  transition: opacity 0.2s ease;
-}
-
-.v-btn.v-btn--icon:hover {
-  opacity: 1;
-}
-
-/* Table rows and action buttons */
-.expense-table :deep(.v-data-table__tr) {
-  transition: background-color 0.2s ease;
-}
-
-.expense-table :deep(.v-data-table__tr:hover) {
-  background-color: rgba(0, 0, 0, 0.03);
-}
-
-.action-buttons {
-  opacity: 0;
-  transition: opacity 0.2s ease;
-  display: flex;
-  align-items: center;
-}
-
-.expense-table :deep(.v-data-table__tr:hover) .action-buttons {
-  opacity: 1;
-}
-
-.action-button {
-  opacity: 0.7;
-  transition: opacity 0.2s ease, background-color 0.2s ease;
-  color: rgb(var(--v-theme-on-surface)) !important;
-}
-
-.action-button:hover {
-  opacity: 1;
-  background-color: var(--v-surface-variant-color);
-}
-
-/* Month header styling */
-.month-header {
-  background-color: var(--v-surface-variant-color);
-  border-radius: 4px;
-  padding: 10px 16px;
-  margin-bottom: 8px;
-  display: flex;
-  align-items: center;
-  cursor: pointer;
-  transition: background-color 0.2s ease;
-}
-
-.month-header:hover {
-  background-color: rgba(var(--v-theme-primary), 0.1);
-}
-
-.month-name {
-  font-weight: 600;
-  margin-left: 8px;
-}
-
-/* Account info styling */
-.account-info {
-  display: flex;
-  align-items: center;
-}
-
-.bank-name {
-  font-size: 0.875rem;
-  text-decoration: underline;
-  text-decoration-style: dotted;
-  cursor: help;
-}
-
-.account-manual {
-  font-size: 0.875rem;
-  color: rgb(var(--v-theme-on-surface));
-  opacity: 0.7;
-  margin-left: 4px;
-}
-
-/* Category cell */
-.category-cell {
-  display: flex;
-  align-items: center;
-}
+  /* Circular button styling */
+  .circle-btn {
+    height: 64px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
 </style>
 
 <script>
 import { ref, onMounted, watch, computed } from 'vue';
 import InputExpenses from './InputExpenses.vue';
 import ExpenseChart from './ExpenseCharts.vue';
-import { formatDate } from '@/utils/dateUtils.js';
+import { formatDate, adjustForTimezone } from '@/utils/dateUtils';
+import { formatCurrency } from '@/utils/formatUtils';
+import { getBankName, getBankAccountDetails, getPlaidCategory } from '@/utils/dataUtilities';
 
 export default {
   components: {
@@ -438,7 +331,6 @@ export default {
 
     // The array to hold selected rows
     const selectedExpenses = ref([]);
-
     const plaidAccounts = ref({});
     const categories = ref([]);
     const scopes = ref([]);
@@ -499,16 +391,7 @@ export default {
       return true;
     });
 
-    // Adjust for timezone
-    const adjustForTimezone = (dateString) => {
-      if (!dateString) return new Date();
-      const date = new Date(dateString);
-      if (isNaN(date.getTime())) return new Date();
-      const timezoneOffset = date.getTimezoneOffset() * 60000;
-      return new Date(date.getTime() + timezoneOffset);
-    };
-
-    // Processed expenses
+    // Processed expenses for making changes
     const processedExpenses = computed(() => {
       if (!expenses.value || expenses.value.length === 0) {
         return [];
@@ -543,7 +426,7 @@ export default {
       });
     });
 
-    // Group by month, sort newest first
+    // Expenses table organized group by month, sort newest first
     const updateMonthGroups = () => {
       const groupedExpenses = {};
       const sortedExpenses = [...processedExpenses.value].sort((a, b) => b.ParsedDate - a.ParsedDate);
@@ -579,14 +462,6 @@ export default {
     // Toggle month group
     const toggleMonthGroup = (index) => {
       monthGroups.value[index].isOpen = !monthGroups.value[index].isOpen;
-    };
-
-    // Format currency
-    const formatCurrency = (amount) => {
-      return new Intl.NumberFormat('en-US', {
-        style: 'currency',
-        currency: 'USD'
-      }).format(amount);
     };
 
     // API fetches
@@ -780,7 +655,7 @@ export default {
       }
     };
 
-    // Edit expense
+    // Single edit expense
     const isEditDialogOpen = ref(false);
     const selectedExpense = ref(null);
     const editExpense = (expense) => {
@@ -799,37 +674,6 @@ export default {
     const showAddExpense = ref(false);
     const toggleAddExpense = () => {
       showAddExpense.value = !showAddExpense.value;
-    };
-
-    // Bank account helpers
-    const getBankName = (accountId) => {
-      if (!accountId || !plaidAccounts.value[accountId]) {
-        return 'Unknown Account';
-      }
-      const account = plaidAccounts.value[accountId];
-      return account.institution || 'Unknown Bank';
-    };
-
-    const getBankAccountDetails = (accountId) => {
-      if (!accountId || !plaidAccounts.value[accountId]) {
-        return 'Unknown Account';
-      }
-      const account = plaidAccounts.value[accountId];
-      const type = account.type
-        ? account.type.charAt(0).toUpperCase() + account.type.slice(1)
-        : '';
-      const subtype = account.subtype
-        ? account.subtype.charAt(0).toUpperCase() + account.subtype.slice(1)
-        : '';
-      const mask = account.mask ? `****${account.mask}` : '';
-      return `${account.name || 'Account'} (${type} ${subtype}) ${mask}`;
-    };
-
-    const getPlaidCategory = (expense) => {
-      if (expense.PlaidPersonalFinanceCategoryPrimary) {
-        return expense.PlaidPersonalFinanceCategoryPrimary.replace(/_/g, ' ');
-      }
-      return expense.PlaidMerchantName || expense.PlaidName || 'Uncategorized';
     };
 
     // Watch selection for debugging

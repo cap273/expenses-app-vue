@@ -34,6 +34,12 @@ export default defineComponent({
     const showScopeSelector = ref(false);
     const publicTokenValue = ref('');
     let handler = null;
+    
+    // Store institution data from Public Token exchange
+    const institutionData = ref({
+      institution_name: '',
+      institution_id: ''
+    });
 
     const loadPlaidScript = () => {
       return new Promise((resolve, reject) => {
@@ -89,6 +95,16 @@ export default defineComponent({
         onSuccess: (public_token, metadata) => {
           // Store the public token and show scope selector
           console.log('Plaid Link success, public token:', public_token);
+          console.log('Plaid Link metadata:', metadata);
+          
+          // Store institution data from metadata
+          if (metadata.institution) {
+            institutionData.value = {
+              institution_name: metadata.institution.name,
+              institution_id: metadata.institution.institution_id
+            };
+          }
+          
           publicTokenValue.value = public_token;
           showScopeSelector.value = true;
         },
@@ -137,10 +153,18 @@ export default defineComponent({
         linkSuccess: true
       });
 
-        // Set the scope ID in the Plaid state
-        setScopeId(data.scope_id);
+      // Set the scope ID in the Plaid state
+      setScopeId(data.scope_id);
       
-      emit('link-success', data);
+      // Emit an event with all relevant data
+      emit('link-success', {
+        item_id: data.item_id,
+        access_token: data.access_token,
+        institution_name: data.institution_name || institutionData.value.institution_name,
+        institution_id: data.institution_id || institutionData.value.institution_id,
+        scope_id: data.scope_id
+      });
+      
       showScopeSelector.value = false;
       window.history.pushState('', '', '/');
     };

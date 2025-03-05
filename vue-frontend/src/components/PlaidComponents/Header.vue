@@ -1,4 +1,4 @@
-<!-- src/components/Header.vue -->
+<!-- src/components/PlaidComponents/Header.vue -->
 <template>
   <div class="grid">
     <h3 class="title">Plaid Quickstart</h3>
@@ -56,8 +56,8 @@
       </div>
       <!-- Display Link component -->
       <div v-else class="linkButton">
-        <!-- Link component needs to be translated into Vue -->
-        <Link />
+        <!-- Link component with success handler -->
+        <Link @link-success="onLinkSuccess" />
       </div>
     </div>
     <div v-else>
@@ -128,9 +128,8 @@
 </template>
 
 <script>
-import { defineComponent } from 'vue';
+import { defineComponent, onMounted, ref, watch } from 'vue';
 import { usePlaid } from '../../composables/usePlaid';
-// Import Link component, which needs to be translated into Vue
 import Link from './Link.vue';
 
 export default defineComponent({
@@ -138,18 +137,48 @@ export default defineComponent({
   components: {
     Link,
   },
-  setup() {
+  emits: ['link-success'],
+  setup(props, { emit }) {
     const { state } = usePlaid();
+    const institutionData = ref(null);
+    
+    // Handle link success from Link component
+    const onLinkSuccess = (data) => {
+      console.log('Link success in Header:', data);
+      // Store institution data for emitting
+      institutionData.value = data;
+      
+      // Forward the event to parent with additional data
+      emit('link-success', {
+        ...data,
+        scope_id: state.scopeId
+      });
+    };
+    
+    // Watch for link success state changes
+    watch(
+      () => state.linkSuccess,
+      (newVal) => {
+        if (newVal && institutionData.value) {
+          // If link is successful but we haven't emitted yet, do so now
+          emit('link-success', {
+            ...institutionData.value,
+            scope_id: state.scopeId
+          });
+        }
+      }
+    );
 
     return {
       state,
+      onLinkSuccess
     };
   },
 });
 </script>
 
 <style scoped>
-/* Simplified styling */
+/* Simplified styling - keeping existing styles */
 .grid {
   width: 100%;
   display: flex;

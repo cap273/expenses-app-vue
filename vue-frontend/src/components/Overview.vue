@@ -344,11 +344,11 @@ const topSpentCategories = computed(() => {
 
       return [
         {
-          name: getMonthName(0), // Current month name
+          name: getMonthName(currentMonth), // Current month name
           data: thisMonthDaily,
         },
         {
-          name: getMonthName(1), // Previous month name
+          name: getMonthName(lastMonth), // Previous month name
           data: lastMonthDaily,
         },
       ];

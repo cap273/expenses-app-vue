@@ -41,6 +41,8 @@ export default defineConfig(({ mode }) => {
           changeOrigin: true,
         },
       },
+      //janusz host
+      allowedHosts: ['localhost3000.thatgoodshit.com'],
       sourcemap: true, // Enable for debugging
     },
     build: {

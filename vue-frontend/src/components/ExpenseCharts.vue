@@ -357,7 +357,7 @@ export default {
         const sankeyData = [];
         filteredExpenses.value.forEach((expense) => {
           const source = `${expense.ScopeName} (${expense.ScopeType})`;
-          const target = expense.ExpenseCategory || 'Uncategorized';
+          const target = expense.ExpenseCategory || getPlaidCategory(expense);
           const amount = parseFloat(expense.Amount?.toString().replace(/[^0-9.-]+/g, "") || 0);
           
           sankeyData.push({

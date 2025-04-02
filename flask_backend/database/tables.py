@@ -17,9 +17,10 @@ metadata = MetaData()
 
 # Define list of (default) categories
 CATEGORY_LIST = [
-    "Restaurant and Takeout (Non-Social)",
-    "Shoes and Clothing",
     "Groceries",
+    "Restaurant and Takeout (Non-Social)",
+    "Restaurant and Takeout (Social)",
+    "Shoes and Clothing",
     "Alcohol",
     "Entertainment",
     "Utilities",
@@ -38,7 +39,6 @@ CATEGORY_LIST = [
     "Education (including student loans)",
     "Internet, Cell Phone, and TV",
     "Miscellaneous",
-    "Restaurant and Takeout (Social)",
     "Rent",
     "Interest and Banking Fees",
     "Car and Renters Insurance",

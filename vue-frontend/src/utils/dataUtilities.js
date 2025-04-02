@@ -106,12 +106,33 @@ const formatCurrency = (number, code) => {
     return `${account.name || 'Account'} (${type} ${subtype}) ${mask}`;
   };
 
-  export const getPlaidCategory = (expense) => {
-    if (expense.PlaidPersonalFinanceCategoryPrimary) {
-      return expense.PlaidPersonalFinanceCategoryPrimary.replace(/_/g, ' ');
-    }
-    return expense.PlaidMerchantName || expense.PlaidName || 'Uncategorized';
-  };
+/**
+ * Gets a formatted category name from Plaid transaction data
+ * @param {Object} expense - Expense object with potential Plaid categorization
+ * @returns {string} - Formatted category name
+ */
+export const getPlaidCategory = (expense) => {
+  // First, try to use ExpenseCategory if it exists and is not null
+  if (expense.ExpenseCategory) {
+    return expense.ExpenseCategory;
+  }
+  
+  // If no ExpenseCategory, try to use Plaid's personal finance categories
+  if (expense.PlaidPersonalFinanceCategoryPrimary) {
+    // Transform the category from UPPERCASE_WITH_UNDERSCORES to Title Case With Spaces
+    const formattedCategory = expense.PlaidPersonalFinanceCategoryPrimary
+      .replace(/_/g, ' ')
+      .toLowerCase()
+      .split(' ')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
+      
+    return formattedCategory;
+  }
+  
+  // Use merchant name or transaction name as a fallback
+  return expense.PlaidMerchantName || expense.PlaidName || 'Uncategorized';
+};
   
   // Export all utilities
   export default {

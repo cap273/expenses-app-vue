@@ -9,6 +9,7 @@ from werkzeug.exceptions import BadRequestKeyError
 
 from flask_backend.utils.db_tools import get_categories
 from flask_backend.utils.session import login_required_api
+from flask_backend.utils.category_mapping import get_category_for_transaction
 from flask_backend.database.models import db, Account, Person, Scope, ScopeAccess
 from flask_backend.database.tables import (
     expenses_table,
@@ -356,7 +357,9 @@ def submit_plaid_transactions():
                     year = today.year
                     expense_date = today
                     expense_day_of_week = today.strftime("%A")
-
+                
+                # adding category helper
+                category=get_category_for_transaction(txn)
                 # Build a dictionary of values for insertion
                 record = {
                     "ScopeID": scope,
@@ -368,7 +371,7 @@ def submit_plaid_transactions():
                     "ExpenseDayOfWeek": expense_day_of_week,
                     "Amount": txn.get("amount"),
                     "AdjustedAmount": txn.get("amount"),  # Initially the same as Amount
-                    "ExpenseCategory": None,  # Can be updated later
+                    "ExpenseCategory": category,  # Can be updated later (updated by janusz eventually)
                     "AdditionalNotes": None,
                     "CreateDate": datetime.now().date(),
                     "LastUpdated": datetime.now().date(),
@@ -511,7 +514,8 @@ def update_expense():
                     Amount=float(amount.replace(",", "")),
                     ExpenseCategory=category,
                     AdditionalNotes=notes,
-                    LastUpdated=datetime.now().date()
+                    LastUpdated=datetime.now().date(),
+                    CategoryConfirmed=True  # Set to True when manually edited (for plaid automatic transactions)
                 )
             )
             result = conn.execute(update_stmt)
@@ -565,7 +569,7 @@ def bulk_update_expenses():
         # Update category if provided
         if 'category' in updates:
             update_values['ExpenseCategory'] = updates['category']
-        
+            update_values['CategoryConfirmed'] = True
         # Update scope if provided
         if 'scope' in updates:
             # Verify the scope is accessible to the user

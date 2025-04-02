@@ -1,4 +1,7 @@
 from flask import Blueprint, jsonify, request, current_app
+#category mapping added via utils
+from flask_backend.utils.category_mapping import get_category_for_transaction
+
 
 # Read env vars from .env file
 import base64
@@ -548,6 +551,10 @@ def submit_plaid_transactions_to_db(transactions, scope_id):
                 expense_date = today
                 expense_day_of_week = today.strftime("%A")
 
+            
+            # Get the appropriate category for this transaction
+            category = get_category_for_transaction(txn)
+
             # Build a dictionary of values for insertion
             record = {
                 "ScopeID": scope_id,
@@ -559,7 +566,7 @@ def submit_plaid_transactions_to_db(transactions, scope_id):
                 "ExpenseDayOfWeek": expense_day_of_week,
                 "Amount": txn.get("amount"),
                 "AdjustedAmount": txn.get("amount"),  # Initially the same as Amount
-                "ExpenseCategory": None,  # Can be updated later
+                "ExpenseCategory": category,  # Can be updated later (04022025 - i updated it)
                 "AdditionalNotes": None,
                 "CreateDate": datetime.now().date(),
                 "LastUpdated": datetime.now().date(),

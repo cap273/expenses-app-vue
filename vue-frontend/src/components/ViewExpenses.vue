@@ -126,15 +126,32 @@
               <template #item.ExpenseCategory="{ item }">
                 <div class="category-cell">
                   <span>{{ item.ExpenseCategory || getPlaidCategory(item) }}</span>
-                  <v-icon
-                    v-if="item.PlaidPersonalFinanceCategoryPrimary"
-                    size="small"
-                    color="green"
-                    class="ml-2"
-                    title="Auto-categorized"
-                  >
-                    mdi-robot
-                  </v-icon>
+                  <v-tooltip v-if="item.PlaidPersonalFinanceCategoryPrimary" location="top">
+                    <template v-slot:activator="{ props }">
+                      <v-icon
+                        v-bind="props"
+                        size="small"
+                        color="green"
+                        class="ml-2"
+                      >
+                        mdi-robot
+                      </v-icon>
+                    </template>
+                    <span>Auto-categorized by Plaid</span>
+                    </v-tooltip>
+                    <v-tooltip v-else-if="item.PlaidTransactionID && item.CategoryConfirmed" location="top">
+                      <template v-slot:activator="{ props }">
+                        <v-icon
+                          v-bind="props"
+                          size="small"
+                          color="blue"
+                          class="ml-2"
+                        >
+                          mdi-check-circle
+                        </v-icon>
+                      </template>
+                      <span>Category confirmed by you</span>
+                    </v-tooltip>
                 </div>
               </template>
 
@@ -621,6 +638,8 @@ export default {
         const updates = {};
         if (bulkEdit.value.updateCategory) {
           updates.category = bulkEdit.value.category;
+          updates.categoryConfirmed = true;
+
         }
         if (bulkEdit.value.updateScope) {
           updates.scope = bulkEdit.value.scope;

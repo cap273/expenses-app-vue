@@ -1,6 +1,6 @@
 from flask import Blueprint, jsonify, request, current_app
 #category mapping added via utils
-from flask_backend.utils.category_mapping import get_category_for_transaction
+from flask_backend.utils.category_mapping import get_category_for_transaction, is_income_category
 
 
 # Read env vars from .env file
@@ -554,6 +554,7 @@ def submit_plaid_transactions_to_db(transactions, scope_id):
             
             # Get the appropriate category for this transaction
             category = get_category_for_transaction(txn)
+            is_income = is_income_category(category)
 
             # Build a dictionary of values for insertion
             record = {
@@ -573,6 +574,7 @@ def submit_plaid_transactions_to_db(transactions, scope_id):
                 "Currency": txn.get("iso_currency_code"),
                 "SuggestedCategory": None,
                 "CategoryConfirmed": False,
+                "IsIncome": is_income,
 
                 # Plaid-specific fields
                 "PlaidAccountID": txn.get("account_id"),

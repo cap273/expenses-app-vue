@@ -18,10 +18,11 @@ metadata = MetaData()
 # Define list of (default) categories
 CATEGORY_LIST = [
     "Groceries",
-    "Restaurant and Takeout (Non-Social)",
+    "Restaurant",
     "Restaurant and Takeout (Social)",
     "Shoes and Clothing",
     "Alcohol",
+    "Loan",
     "Entertainment",
     "Utilities",
     "Sports and Fitness",
@@ -29,6 +30,8 @@ CATEGORY_LIST = [
     "Airplane Flights",
     "Hotel and Lodging",
     "Car-Related Expenses (excluding gasoline)",
+    "Car Rental",
+    "Parking",
     "Taxi and Ride-Sharing",
     "Gasoline",
     "Household Goods",
@@ -92,6 +95,7 @@ expenses_table = Table(
     Column("PlaidPersonalFinanceCategoryDetailed", String(255)),
     Column("PlaidPersonalFinanceCategoryPrimary", String(255)),
     Column("PlaidPersonalFinanceCategoryIconURL", String(255)),
+    Column("IsIncome", Boolean, default=False),
     extend_existing=False,
     implicit_returning=False,
 )

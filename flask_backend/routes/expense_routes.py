@@ -97,6 +97,10 @@ def get_expenses():
                 expense["Amount"] = "${:,.2f}".format(expense["Amount"])
             elif expense["Currency"] == "EUR":
                 expense["Amount"] = "€{:,.2f}".format(expense["Amount"])
+            #added for income tag
+            if "IsIncome" not in expense:
+                category = expense.get("ExpenseCategory", "")
+                expense["IsIncome"] = category and category.startswith("Income:")
 
         return jsonify({"success": True, "expenses": expenses})
 

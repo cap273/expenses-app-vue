@@ -6,9 +6,9 @@ Maps Plaid Personal Finance Categories to app expense categories.
 PLAID_TO_APP_CATEGORY_MAP = {
     # Food & Drink
     "FOOD_AND_DRINK": "Groceries",  # Default mapping
-    "FOOD_AND_DRINK_RESTAURANTS": "Restaurant and Takeout (Non-Social)",
-    "FOOD_AND_DRINK_COFFEE": "Restaurant and Takeout (Non-Social)",
-    "FOOD_AND_DRINK_FAST_FOOD": "Restaurant and Takeout (Non-Social)",
+    "FOOD_AND_DRINK_RESTAURANTS": "Restaurant",
+    "FOOD_AND_DRINK_COFFEE": "Restaurant",
+    "FOOD_AND_DRINK_FAST_FOOD": "Restaurant",
     "FOOD_AND_DRINK_GROCERY": "Groceries",
     "FOOD_AND_DRINK_ALCOHOL": "Alcohol",
     
@@ -16,7 +16,7 @@ PLAID_TO_APP_CATEGORY_MAP = {
     "TRANSPORTATION": "Other Transportation Expenses",
     "TRANSPORTATION_PUBLIC_TRANSIT": "Other Transportation Expenses",
     "TRANSPORTATION_TAXI": "Taxi and Ride-Sharing",
-    "TRANSPORTATION_PARKING": "Car-Related Expenses (excluding gasoline)",
+    "TRANSPORTATION_PARKING": "Parking",
     "TRANSPORTATION_GAS": "Gasoline",
     "TRANSPORTATION_CAR_SERVICE": "Car-Related Expenses (excluding gasoline)",
     
@@ -24,7 +24,7 @@ PLAID_TO_APP_CATEGORY_MAP = {
     "TRAVEL": "Other Transportation Expenses",
     "TRAVEL_FLIGHTS": "Airplane Flights",
     "TRAVEL_LODGING": "Hotel and Lodging",
-    "TRAVEL_RENTAL_CAR": "Car-Related Expenses (excluding gasoline)",
+    "TRAVEL_RENTAL_CAR": "Car Rental",
     
     # Shopping
     "SHOPPING": "Miscellaneous",
@@ -68,11 +68,16 @@ PLAID_TO_APP_CATEGORY_MAP = {
     
     # Financial
     "FEES_AND_CHARGES": "Interest and Banking Fees",
-    "LOAN": "Education (including student loans)",
+    "LOAN": "Loan",
     
-    # Income (will likely be ignored as expense categories)
-    "INCOME": "Miscellaneous",
-    "INCOME_DIVIDENDS": "Miscellaneous",
+    # Income categories - these will help identify income transactions
+    "INCOME": "Income: General",
+    "INCOME_DIVIDENDS": "Income: Dividends",
+    "INCOME_INTEREST_EARNED": "Income: Interest",
+    "INCOME_RETIREMENT_PENSION": "Income: Retirement/Pension", 
+    "INCOME_TAX_REFUND": "Income: Tax Refund",
+    "INCOME_UNEMPLOYMENT": "Income: Unemployment",
+    "INCOME_WAGES": "Income: Salary/Wages",
     
     # Catch-all
     "GENERAL_SERVICES": "Miscellaneous",
@@ -151,4 +156,16 @@ def get_category_for_transaction(transaction):
                 return app_category
     
     # Fallback to a default category
-    return "Miscellaneous"
+    return "Miscellaneous" 
+
+def is_income_category(category):
+    """
+    Determine if a category represents income
+    
+    Args:
+        category (str): The category name
+        
+    Returns:
+        bool: True if this is an income category
+    """
+    return category and category.startswith("Income:")

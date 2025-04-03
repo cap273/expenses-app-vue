@@ -83,27 +83,32 @@
               :hide-default-header="false"
               hover
             >
-              <!-- Source Field (Bank Account) -->
-              <template #item.Source="{ item }">
-                <div v-if="item.PlaidAccountID" class="account-info">
-                  <v-avatar size="24" class="mr-2" v-if="item.PlaidMerchantLogoURL">
-                    <v-img :src="item.PlaidMerchantLogoURL" alt="Bank Logo"></v-img>
-                  </v-avatar>
-                  <v-tooltip location="top">
-                    <template v-slot:activator="{ props }">
-                      <span v-bind="props" class="bank-name">
-                        {{ getBankName(item.PlaidAccountID) }}
-                      </span>
-                    </template>
-                    <span>{{ getBankAccountDetails(item.PlaidAccountID) }}</span>
-                  </v-tooltip>
-                </div>
-                <div v-else>
-                  <v-icon small>mdi-pencil-box-outline</v-icon>
-                  <span class="account-manual">Manual</span>
-                </div>
-              </template>
-
+<!-- Source Field (Bank Account) -->
+            <template #item.Source="{ item }">
+              <div v-if="item.PlaidAccountID" class="account-info">
+                <v-icon small color="primary" class="mr-1">mdi-bank</v-icon>
+                <v-tooltip location="top">
+                  <template v-slot:activator="{ props }">
+                    <span v-bind="props" class="bank-name">
+                      {{ getBankName(item.PlaidAccountID, plaidAccounts) }}
+                    </span>
+                  </template>
+                  <span>{{ getBankAccountDetails(item.PlaidAccountID, plaidAccounts) }}</span>
+                </v-tooltip>
+              </div>
+              <div v-else class="account-info">
+                <v-icon small color="grey">mdi-pencil-box-outline</v-icon>
+                <span class="account-manual">Manual</span>
+              </div>
+            </template>
+            <template #item.Merchant="{ item }">
+              <span v-if="item.PlaidMerchantName || item.PlaidName">
+                {{ item.PlaidMerchantName || item.PlaidName }}
+              </span>
+              <span v-else class="text-disabled">
+                Not available
+              </span>
+            </template>
               <!-- Scope Name Column -->
               <template #item.ScopeName="{ item }">
                 {{ item.ScopeName }}
@@ -338,6 +343,7 @@ export default {
     const expenses = ref([]);
     const headers = ref([
       { title: 'Source', value: 'Source', sortable: true },
+      { title: 'Merchant/Vendor', value: 'Merchant', sortable: true }, // Add this new column
       { title: 'Scope', value: 'ScopeName', sortable: true },
       { title: 'Date', value: 'ExpenseDate', sortable: true },
       { title: 'Amount', value: 'Amount' },
@@ -755,6 +761,7 @@ export default {
       categories,
       scopes,
       months,
+      plaidAccounts,
     };
   },
 };

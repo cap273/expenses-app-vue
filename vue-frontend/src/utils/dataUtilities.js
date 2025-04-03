@@ -82,28 +82,24 @@ const formatCurrency = (number, code) => {
     ];
   };
 
-  //Plaid Bank Helpers
-  export const getBankName = (accountId) => {
-    if (!accountId || !plaidAccounts.value[accountId]) {
-      return 'Unknown Account';
+  export const getBankName = (accountId, plaidAccounts) => {
+    if (!accountId || !plaidAccounts || !plaidAccounts[accountId]) {
+      return 'Unknown Bank';
     }
-    const account = plaidAccounts.value[accountId];
-    return account.institution || 'Unknown Bank';
+    return plaidAccounts[accountId].institution || 'Unknown Bank';
   };
-
-  export const getBankAccountDetails = (accountId) => {
-    if (!accountId || !plaidAccounts.value[accountId]) {
+  
+  export const getBankAccountDetails = (accountId, plaidAccounts) => {
+    if (!accountId || !plaidAccounts || !plaidAccounts[accountId]) {
       return 'Unknown Account';
     }
-    const account = plaidAccounts.value[accountId];
-    const type = account.type
-      ? account.type.charAt(0).toUpperCase() + account.type.slice(1)
-      : '';
-    const subtype = account.subtype
-      ? account.subtype.charAt(0).toUpperCase() + account.subtype.slice(1)
-      : '';
+    const account = plaidAccounts[accountId];
+    const type = account.type ? 
+      account.type.charAt(0).toUpperCase() + account.type.slice(1) : '';
+    const subtype = account.subtype ? 
+      account.subtype.charAt(0).toUpperCase() + account.subtype.slice(1) : '';
     const mask = account.mask ? `****${account.mask}` : '';
-    return `${account.name || 'Account'} (${type} ${subtype}) ${mask}`;
+    return `${account.name || 'Account'} (${type} ${subtype}) ${mask}`.trim();
   };
 
 /**

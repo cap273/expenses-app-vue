@@ -54,6 +54,14 @@ def get_expenses():
                 scopes_table.c.ScopeName,  # Add ScopeName
                 scopes_table.c.ScopeType,  # Add ScopeType
                 person_name_expr,
+                # Plaid-related fields
+                expenses_table.c.PlaidAccountID,
+                expenses_table.c.PlaidTransactionID,
+                expenses_table.c.PlaidMerchantName,
+                expenses_table.c.PlaidName,
+                expenses_table.c.PlaidMerchantLogoURL,
+                expenses_table.c.CategoryConfirmed,
+                expenses_table.c.PlaidPersonalFinanceCategoryPrimary
             )
             .select_from(
                 expenses_table.join(

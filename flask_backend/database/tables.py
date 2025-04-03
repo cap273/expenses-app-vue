@@ -18,7 +18,7 @@ metadata = MetaData()
 # Define list of (default) categories
 CATEGORY_LIST = [
     "Groceries",
-    "Restaurant",
+    "Restaurants",
     "Restaurant and Takeout (Social)",
     "Shoes and Clothing",
     "Alcohol",

@@ -2,140 +2,298 @@
   <div class="page-background">
     <v-container class="content-container py-4">
       <div class="content-box p-4">
-
         <h2 class="text-h4 mb-6">Overview</h2>
 
-        <!-- 1. Row of summary cards: 
-             (A) Total Cash, (B) Spent This Month, (C) Most Spent Categories, (D) Active Scopes -->
-        <v-row class="gy-4">
-          <!-- (A) Total Cash Balance -->
-          <v-col cols="12" sm="6" md="3">
-            <v-card class="summary-card hover-elevate">
-              <div class="d-flex flex-column align-center justify-center">
-                <div class="card-label mb-2">Total Cash Balance</div>
-                <div v-if="loadingBalances" class="d-flex align-center my-2">
-                  <v-progress-circular indeterminate size="24" />
-                </div>
-                <div v-else :class="amountClass(totalCash, 'value-text')">
+        <!-- 1. Consolidated summary info panel -->
+        <v-card class="info-panel mb-6 hover-elevate">
+          <v-row class="pa-4 ma-0">
+            <!-- Cash Balance with Bank Account Details -->
+            <v-col cols="12" md="4" class="info-section">
+              <div class="info-title">Total Cash Balance</div>
+              <div v-if="loadingBalances" class="d-flex align-center">
+                <v-progress-circular indeterminate size="20" width="2" />
+              </div>
+              <div v-else class="d-flex flex-column align-center">
+                <div :class="amountClass(totalCash, 'info-value')">
                   {{ formatCurrency(totalCash) }}
                 </div>
-              </div>
-            </v-card>
-          </v-col>
-
-          <!-- (B) Spent This Month -->
-          <v-col cols="12" sm="6" md="3">
-            <v-card class="summary-card hover-elevate">
-              <div class="d-flex flex-column align-center justify-center">
-                <div class="card-label mb-2">Spent This Month</div>
-                <div v-if="loading" class="d-flex align-center my-2">
-                  <v-progress-circular indeterminate size="24" />
+                <!-- Bank Account Breakdown -->
+                <div class="bank-accounts-container mt-2">
+                  <div v-for="(account, index) in bankAccounts" 
+                       :key="index" 
+                       class="bank-account-item">
+                    <v-icon size="small" color="primary" class="mr-1">mdi-bank</v-icon>
+                    <span class="bank-name">{{ account.name }}</span>
+                    <span class="bank-balance">{{ formatCurrency(account.balance) }}</span>
+                  </div>
+                  <div v-if="bankAccounts.length === 0" class="text-caption text-center mt-2">
+                    <v-btn size="x-small" color="primary" variant="text" @click="$router.push('/plaid')">
+                      <v-icon size="small">mdi-plus</v-icon>
+                      Connect a bank
+                    </v-btn>
+                  </div>
                 </div>
-                <div v-else :class="amountClass(monthlyTotal, 'value-text')">
+              </div>
+            </v-col>
+            
+            <!-- Monthly Spend -->
+            <v-col cols="12" md="4" class="info-section">
+              <div class="info-title">This Month's Spending</div>
+              <div v-if="loading" class="d-flex align-center">
+                <v-progress-circular indeterminate size="20" width="2" />
+              </div>
+              <div v-else class="d-flex flex-column align-center">
+                <div :class="amountClass(monthlyTotal, 'info-value')">
                   {{ formatCurrency(monthlyTotal) }}
                 </div>
               </div>
+            </v-col>
+
+            <!-- Filter by Scope -->
+            <v-col cols="12" md="4" class="info-section">
+              <div class="d-flex align-items-center justify-center">
+                <div class="info-title">Filter by scope:</div>
+                <v-btn 
+                  icon 
+                  variant="text" 
+                  color="primary" 
+                  @click="$router.push('/household')"
+                  size="x-small"
+                  class="ml-2"
+                >
+                  <v-icon size="small">mdi-cog</v-icon>
+                </v-btn>
+              </div>
+              <div v-if="loading" class="d-flex align-center">
+                <v-progress-circular indeterminate size="20" width="2" />
+              </div>
+              <div v-else class="scope-selector-container">
+                <v-chip-group
+                  v-model="selectedScopes"
+                  column
+                  multiple
+                  class="scope-filters"
+                >
+                  <v-chip
+                    v-for="scope in activeScopes"
+                    :key="scope.id"
+                    :value="scope.id"
+                    filter
+                    size="small"
+                    variant="elevated"
+                    :color="scope.type === 'personal' ? 'blue' : 'purple'"
+                  >
+                    {{ scope.name }}
+                  </v-chip>
+                </v-chip-group>
+                <div class="text-center mt-1">
+                  <v-btn
+                    variant="text"
+                    size="x-small"
+                    @click="selectedScopes = activeScopes.map(s => s.id)"
+                    color="primary"
+                  >
+                    SELECT ALL
+                  </v-btn>
+                  <v-btn
+                    variant="text"
+                    size="x-small"
+                    @click="selectedScopes = []"
+                    color="error"
+                    class="ml-2"
+                  >
+                    CLEAR ALL
+                  </v-btn>
+                </div>
+              </div>
+            </v-col>
+          </v-row>
+        </v-card>
+
+        <!-- 2. Second row: Spending Insights, Top Categories -->
+        <v-row class="gy-4">
+          <!-- (A) Spending Insights -->
+          <v-col cols="12" md="4">
+            <v-card class="pa-3 hover-elevate h-100">
+              <div class="d-flex align-center justify-space-between mb-2">
+                <h3 class="text-h6 mb-0">Spending Insights</h3>
+              </div>
+              <v-divider class="mb-3"></v-divider>
+              
+              <div v-if="loading" class="d-flex justify-center my-2">
+                <v-progress-circular indeterminate size="24" />
+              </div>
+              <div v-else class="insights-container">
+                <div class="donut-container">
+                  <apexchart
+                    v-if="topSpentCategories.length > 0"
+                    type="donut"
+                    height="200"
+                    :options="categoryChartOptions"
+                    :series="categoryChartSeries"
+                  />
+                  <div v-else class="text-center pt-10">
+                    <span class="text-subtitle-2">No spending data available</span>
+                  </div>
+                </div>
+                
+                <div class="insights-summary mt-3">
+                  <div class="d-flex align-center mb-2">
+                    <v-icon color="primary" size="small" class="mr-2">mdi-wallet</v-icon>
+                    <span class="text-subtitle-2">Active Scopes: {{ activeScopes.length }}</span>
+                  </div>
+                  <div class="d-flex align-center mb-2">
+                    <v-icon color="primary" size="small" class="mr-2">mdi-calendar</v-icon>
+                    <span class="text-subtitle-2">Tracked Since: {{ trackingSince }}</span>
+                  </div>
+                  <div class="d-flex align-center">
+                    <v-icon color="primary" size="small" class="mr-2">mdi-tag-multiple</v-icon>
+                    <span class="text-subtitle-2">Top Category: {{ topCategory }}</span>
+                  </div>
+                </div>
+              </div>
             </v-card>
           </v-col>
 
-          <!-- (C) Most Spent Categories (Top 5 for current month) -->
-          <v-col cols="12" sm="6" md="3">
-            <v-card class="summary-card hover-elevate">
-              <div class="card-label mb-2 text-center">Most Spent Categories</div>
-              <div v-if="loading" class="d-flex align-center justify-center my-4">
+          <!-- (B) Top Categories -->
+          <v-col cols="12" md="8">
+            <v-card class="pa-3 hover-elevate h-100">
+              <div class="d-flex align-center justify-space-between mb-2">
+                <h3 class="text-h6 mb-0">Top Categories</h3>
+                <v-menu location="bottom end">
+                  <template v-slot:activator="{ props }">
+                    <v-btn icon variant="text" v-bind="props" size="small">
+                      <v-icon>mdi-dots-vertical</v-icon>
+                    </v-btn>
+                  </template>
+                  <v-list>
+                    <v-list-item @click="$router.push('/input_expenses')">
+                      <v-list-item-title>Add New Expense</v-list-item-title>
+                    </v-list-item>
+                    <v-list-item @click="$router.push('/view_expenses')">
+                      <v-list-item-title>View All Expenses</v-list-item-title>
+                    </v-list-item>
+                  </v-list>
+                </v-menu>
+              </div>
+              <v-divider class="mb-3"></v-divider>
+              
+              <div v-if="loading" class="d-flex justify-center my-4">
                 <v-progress-circular indeterminate size="24" />
               </div>
-              <div v-else-if="topSpentCategories.length > 0" class="categories-list">
-                <div 
-                  v-for="(cat, idx) in topSpentCategories.slice(0, 3)" 
-                  :key="cat.category + idx"
-                  class="category-item"
-                >
-                  <span class="category-name">{{ cat.category }}</span>
-                  <span :class="amountClass(cat.amount, 'category-amount')">
-                    {{ formatCurrency(cat.amount) }}
-                  </span>
-                </div>
-              </div>
+              <v-row v-else-if="topSpentCategories.length > 0" class="pa-2">
+                <v-col cols="12">
+                  <!-- Category list with full category names -->
+                  <div class="categories-list">
+                    <div 
+                      v-for="(cat, idx) in topSpentCategories" 
+                      :key="cat.category + idx"
+                      class="category-item"
+                    >
+                      <div class="d-flex align-center category-name-container">
+                        <div class="category-bar" 
+                          :style="{
+                            width: `${(cat.amount / topSpentCategories[0].amount) * 100}%`,
+                            backgroundColor: getCategoryColor(idx)
+                          }"
+                        ></div>
+                        <div class="category-name-wrapper ml-2">
+                          {{ cat.category }}
+                        </div>
+                      </div>
+                      <span :class="amountClass(cat.amount, 'category-amount')">
+                        {{ formatCurrency(cat.amount) }}
+                      </span>
+                    </div>
+                  </div>
+                </v-col>
+              </v-row>
               <div v-else class="text-center text-subtitle-2 my-4">
                 No data available
               </div>
             </v-card>
           </v-col>
-
-          <!-- (D) Active Scopes -->
-          <v-col cols="12" sm="6" md="3">
-            <v-card class="summary-card hover-elevate">
-              <div class="d-flex flex-column align-center justify-center">
-                <div class="card-label mb-2">Active Scopes</div>
-                <div v-if="loading" class="d-flex align-center my-2">
-                  <v-progress-circular indeterminate size="24" />
-                </div>
-                <template v-else>
-                  <div class="value-text">{{ activeScopes.length }}</div>
-                  <div class="scope-summary">
-                    {{ scopesSummary }}
-                  </div>
-                </template>
-              </div>
-            </v-card>
-          </v-col>
         </v-row>
 
-        <!-- 2. Second row: (A) Top 5 Recent Transactions, (B) Month Spend Timeline Chart -->
+        <!-- 3. Third row: Recent Transactions and Month Spend Timeline -->
         <v-row class="mt-6 gy-4">
-          <!-- (A) Top 5 Recent Transactions -->
+          <!-- (A) Recent Transactions as a simple table -->
           <v-col cols="12" md="6">
             <v-card class="pa-3 hover-elevate" style="height: 100%;">
-              <v-card-title class="p-0">Top 5 Recent Transactions</v-card-title>
-              <v-divider class="my-2" />
-              <div v-if="loading" class="d-flex align-center justify-center">
+              <div class="d-flex align-center justify-space-between mb-2">
+                <h3 class="text-h6 mb-0">Recent Transactions</h3>
+                <v-btn 
+                  variant="text" 
+                  color="primary" 
+                  size="small"
+                  @click="$router.push('/view_expenses')"
+                >
+                  View All
+                </v-btn>
+              </div>
+              <v-divider class="mb-3"></v-divider>
+              
+              <div v-if="loading" class="d-flex align-center justify-center my-4">
                 <v-progress-circular indeterminate size="24"/>
               </div>
-              <div v-else>
-                <v-list lines="one">
-                  <v-list-item
-                    v-for="(tx, idx) in topFiveTransactions"
-                    :key="tx.ExpenseID || idx"
-                    class="transaction-item"
-                  >
-                    <v-list-item-content>
-                      <v-list-item-title>
-                        {{ tx.ExpenseCategory || 'Uncategorized' }}
-                      </v-list-item-title>
-                      <v-list-item-subtitle>
-                        {{ formatCurrency(tx.Amount) }} on {{ formatDate(tx.ExpenseDate) }}
-                      </v-list-item-subtitle>
-                    </v-list-item-content>
-                  </v-list-item>
-                </v-list>
+              <div v-else-if="topFiveTransactions.length > 0" class="recent-transactions">
+                <v-table dense>
+                  <thead>
+                    <tr>
+                      <th>Date</th>
+                      <th>Merchant/Category</th>
+                      <th class="text-right">Amount</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr
+                      v-for="(tx, idx) in topFiveTransactions"
+                      :key="tx.ExpenseID || idx"
+                      class="transaction-row"
+                    >
+                      <td>{{ formatShortDate(tx.ExpenseDate) }}</td>
+                      <td>{{ tx.PlaidMerchantName || tx.ExpenseCategory || 'Uncategorized' }}</td>
+                      <td class="text-right" :class="amountClass(parseFloat(tx.Amount.replace(/[^0-9.-]+/g, '')), 'text-body-2')">
+                        {{ formatCurrency(parseFloat(tx.Amount.replace(/[^0-9.-]+/g, ''))) }}
+                      </td>
+                    </tr>
+                  </tbody>
+                </v-table>
               </div>
-              <v-card-actions>
-                <v-spacer />
-                <v-btn variant="text" color="primary" @click="$router.push('/view_expenses')">
-                  View All Expenses
-                </v-btn>
-              </v-card-actions>
+              <div v-else class="text-center my-4">
+                <p class="text-medium-emphasis">No recent transactions</p>
+              </div>
             </v-card>
           </v-col>
 
-          <!-- (B) Month Spend Timeline: This Month vs. Last Month -->
+          <!-- (B) Month Spend Timeline: Cumulative Chart -->
           <v-col cols="12" md="6">
             <v-card class="pa-3 hover-elevate" style="height: 100%;">
-              <v-card-title class="p-0">Month Spend Timeline</v-card-title>
-              <v-divider class="my-2" />
-              <div v-if="loading" class="d-flex align-center justify-center mt-4">
+              <div class="d-flex align-center justify-space-between mb-2">
+                <h3 class="text-h6 mb-0">Monthly Spending</h3>
+                <v-select
+                  v-model="timelineView"
+                  :items="['Daily', 'Cumulative']"
+                  density="compact"
+                  hide-details
+                  class="timeline-selector"
+                  style="max-width: 150px"
+                ></v-select>
+              </div>
+              <v-divider class="mb-3"></v-divider>
+              
+              <div v-if="loading" class="d-flex align-center justify-center my-4">
                 <v-progress-circular indeterminate size="24"/>
               </div>
               <div v-else class="chart-wrapper">
                 <!-- Chart component that re-renders on theme change -->
                 <apexchart
-                  v-if="chartSeries.length && !chartLoading"
+                  v-if="spendingSeries.length && !chartLoading"
                   :key="themeKey"
-                  type="line"
-                  height="350"
-                  :options="chartOptions"
-                  :series="chartSeries"
+                  type="area"
+                  height="300"
+                  :options="spendingChartOptions"
+                  :series="spendingSeries"
                 />
                 <div v-else-if="chartLoading" class="d-flex justify-center align-center h-100">
                   <v-progress-circular indeterminate size="32"/>
@@ -148,7 +306,7 @@
           </v-col>
         </v-row>
 
-        <!-- 3. Connected Bank Accounts (Plaid) -->
+        <!-- 4. Connected Bank Accounts (Plaid) -->
         <v-row class="mt-6">
           <v-col cols="12">
             <PlaidAccountsOverview @accounts-fetched="onAccountsFetched" />
@@ -164,9 +322,8 @@ import { ref, onMounted, computed, watch } from 'vue'
 import PlaidAccountsOverview from './PlaidComponents/PlaidAccountsOverview.vue'
 import VueApexCharts from 'vue3-apexcharts'
 import { useTheme } from 'vuetify'
-import { formatDate, adjustForTimezone, daysInMonth, getMonthName } from '@/utils/dateUtils';
-import { formatCurrency, amountClass } from '@/utils/formatUtils';
-import { getDailyTotals } from '@/utils/dataUtils';
+import { formatDate, formatShortDate, adjustForTimezone, daysInMonth, getMonthName } from '@/utils/dateUtils';
+import { formatCurrency, amountClass, parseNumericValue } from '@/utils/formatUtils';
 
 export default {
   name: 'Overview',
@@ -177,30 +334,38 @@ export default {
   setup() {
     // Theme changes
     const theme = useTheme();
-      // Add a theme key to force chart re-render on theme change
-      const themeKey = ref(0);
-      const chartLoading = ref(false);
-      
-      // Watch for theme changes
-      watch(() => theme.global.name.value, () => {
-        // Trigger chart reload when theme changes
-        chartLoading.value = true;
-        setTimeout(() => {
-          themeKey.value++; // Increment key to force re-render
-          chartLoading.value = false;
-        }, 100);
-      });
+    const themeKey = ref(0);
+    const chartLoading = ref(false);
+    
+    // Watch for theme changes
+    watch(() => theme.global.name.value, () => {
+      // Trigger chart reload when theme changes
+      chartLoading.value = true;
+      setTimeout(() => {
+        themeKey.value++; // Increment key to force re-render
+        chartLoading.value = false;
+      }, 100);
+    });
     
     // Reactive data
     const loading = ref(true);
     const loadingBalances = ref(true);
     const expenses = ref([]);
     const activeScopes = ref([]);
+    const selectedScopes = ref([]);
     const totalCash = ref(0);
     const error = ref(null);
+    const timelineView = ref('Cumulative');
+    const bankAccounts = ref([]);
+    const trackingSince = ref('N/A');
 
     onMounted(() => {
       fetchAllData();
+      
+      // Set tracking since from computed value after data is loaded
+      watch(getTrackingSince, (newVal) => {
+        trackingSince.value = newVal;
+      });
     });
 
     const fetchAllData = async () => {
@@ -232,6 +397,8 @@ export default {
         const data = await response.json();
         if (data.success) {
           activeScopes.value = data.scopes;
+          // Select all scopes by default
+          selectedScopes.value = data.scopes.map(scope => scope.id);
         } else {
           throw new Error(data.error || 'Failed to fetch scopes');
         }
@@ -241,192 +408,342 @@ export default {
       }
     };
 
-// Update the monthlyTotal computed property
-const monthlyTotal = computed(() => {
-  const now = new Date();
-  const currentMonth = now.getMonth();
-  const currentYear = now.getFullYear();
-  
-  return expenses.value
-    .filter(e => {
-      const d = adjustForTimezone(e.ExpenseDate);
-      return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
-    })
-    .reduce((acc, e) => {
-      const amt = parseFloat(String(e.Amount).replace(/[^0-9.-]+/g, '')) || 0;
-      return acc + amt;
-    }, 0);
-});
+    // Filtered expenses based on selected scopes
+    const filteredExpenses = computed(() => {
+      if (!expenses.value || !selectedScopes.value.length) return [];
+      
+      return expenses.value.filter(expense => 
+        selectedScopes.value.includes(expense.ScopeID)
+      );
+    });
 
-// Update the topFiveTransactions computed property
-const topFiveTransactions = computed(() => {
-  return [...expenses.value]
-    .sort((a, b) => adjustForTimezone(b.ExpenseDate) - adjustForTimezone(a.ExpenseDate))
-    .slice(0, 5);
-});
+    // Monthly total computed property
+    const monthlyTotal = computed(() => {
+      const now = new Date();
+      const currentMonth = now.getMonth();
+      const currentYear = now.getFullYear();
+      
+      return filteredExpenses.value
+        .filter(e => {
+          const d = adjustForTimezone(e.ExpenseDate);
+          return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+        })
+        .reduce((acc, e) => {
+          const amt = parseNumericValue(e.Amount);
+          return acc + amt;
+        }, 0);
+    });
 
-// Update topSpentCategories computed property
-const topSpentCategories = computed(() => {
-  const now = new Date();
-  const currentMonth = now.getMonth();
-  const currentYear = now.getFullYear();
-  const catMap = {};
-  
-  expenses.value.forEach(e => {
-    const d = adjustForTimezone(e.ExpenseDate);
-    if (d.getMonth() === currentMonth && d.getFullYear() === currentYear) {
-      const cat = e.ExpenseCategory || 'Uncategorized';
-      const amt = parseFloat(String(e.Amount).replace(/[^0-9.-]+/g, '')) || 0;
-      catMap[cat] = (catMap[cat] || 0) + amt;
-    }
-  });
-  
-  const catArray = Object.entries(catMap)
-    .map(([category, amount]) => ({ category, amount }))
-    .sort((a, b) => b.amount - a.amount);
-    
-  return catArray.slice(0, 5);
-});
+    // Top 5 recent transactions
+    const topFiveTransactions = computed(() => {
+      return [...filteredExpenses.value]
+        .sort((a, b) => adjustForTimezone(b.ExpenseDate) - adjustForTimezone(a.ExpenseDate))
+        .slice(0, 5);
+    });
 
-    // (D) Active scopes summary
+    // Top spent categories
+    const topSpentCategories = computed(() => {
+      const now = new Date();
+      const currentMonth = now.getMonth();
+      const currentYear = now.getFullYear();
+      const catMap = {};
+      
+      filteredExpenses.value.forEach(e => {
+        const d = adjustForTimezone(e.ExpenseDate);
+        if (d.getMonth() === currentMonth && d.getFullYear() === currentYear) {
+          const cat = e.ExpenseCategory || 'Uncategorized';
+          const amt = parseNumericValue(e.Amount);
+          catMap[cat] = (catMap[cat] || 0) + amt;
+        }
+      });
+      
+      const catArray = Object.entries(catMap)
+        .map(([category, amount]) => ({ category, amount }))
+        .sort((a, b) => b.amount - a.amount);
+        
+      return catArray.slice(0, 5);
+    });
+
+    // Active scopes summary
     const scopesSummary = computed(() => {
       const personal = activeScopes.value.filter(s => s.type === 'personal').length;
       const household = activeScopes.value.filter(s => s.type === 'household').length;
       return `${personal} Personal, ${household} Household`;
+    });
+    
+    // Get the top spending category
+    const topCategory = computed(() => {
+      if (topSpentCategories.value.length > 0) {
+        return topSpentCategories.value[0].category;
+      }
+      return 'None';
+    });
+    
+    // Get tracking since date - earliest expense date
+    const getTrackingSince = computed(() => {
+      if (expenses.value.length === 0) return 'N/A';
+      
+      try {
+        // Find earliest expense date
+        const dates = expenses.value
+          .map(e => adjustForTimezone(e.ExpenseDate))
+          .filter(d => d instanceof Date && !isNaN(d));
+          
+        if (dates.length === 0) return 'N/A';
+        
+        const earliestDate = new Date(Math.min(...dates.map(d => d.getTime())));
+        return formatDate(earliestDate);
+      } catch (e) {
+        console.error('Error calculating tracking since date:', e);
+        return 'N/A';
+      }
     });
 
     // Callback from Plaid child
     const onAccountsFetched = (totalBalance) => {
       totalCash.value = totalBalance;
       loadingBalances.value = false;
+      
+      // Fetch bank accounts info
+      fetchBankAccounts();
+    };
+    
+    // Fetch bank account details
+    const fetchBankAccounts = async () => {
+      try {
+        const response = await fetch('/api/get_plaid_items');
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success && data.items) {
+            const accounts = [];
+            
+            for (const item of data.items) {
+              try {
+                const accountsResponse = await fetch(`/api/get_item_accounts?item_id=${item.item_id}`);
+                if (accountsResponse.ok) {
+                  const accountsData = await accountsResponse.json();
+                  if (accountsData.success && accountsData.accounts) {
+                    accountsData.accounts.forEach(account => {
+                      accounts.push({
+                        name: `${item.institution_name} - ${account.name}`,
+                        balance: account.balances.available || account.balances.current || 0,
+                        type: account.type,
+                        subtype: account.subtype
+                      });
+                    });
+                  }
+                }
+              } catch (e) {
+                console.error(`Error fetching accounts for item ${item.item_id}:`, e);
+              }
+            }
+            
+            bankAccounts.value = accounts;
+          }
+        }
+      } catch (e) {
+        console.error('Error fetching bank accounts:', e);
+      }
     };
 
-    // -----------------------------------
-    // Month Spend Timeline (Line Chart)
-    // -----------------------------------
-    
- 
-    // Helper: returns array of length = # of days in that month, each element = daily total
-    const getDailyTotals = (year, month) => {
-  const numDays = daysInMonth(year, month);
-  const dailyTotals = Array(numDays).fill(0);
-  
-  expenses.value.forEach(e => {
-    const d = adjustForTimezone(e.ExpenseDate);
-    if (d.getMonth() === month && d.getFullYear() === year) {
-      const dayIndex = d.getDate() - 1; // zero-based index
-      const amt = parseFloat(String(e.Amount).replace(/[^0-9.-]+/g, "")) || 0;
-      dailyTotals[dayIndex] += amt;
-    }
-  });
-  
-  return dailyTotals;
-};
-    // Chart series with actual month names
-    const chartSeries = computed(() => {
-      if (!expenses.value.length) return [];
-
-      const now = new Date();
-      const currentMonth = now.getMonth();
-      const currentYear = now.getFullYear();
-
-      // Current month data
-      const thisMonthDaily = getDailyTotals(currentYear, currentMonth);
-
-      // Previous month data
-      let lastMonth = currentMonth - 1;
-      let lastMonthYear = currentYear;
-      if (lastMonth < 0) {
-        lastMonth = 11;
-        lastMonthYear -= 1;
-      }
-      const lastMonthDaily = getDailyTotals(lastMonthYear, lastMonth);
-
-      return [
-        {
-          name: getMonthName(currentMonth), // Current month name
-          data: thisMonthDaily,
-        },
-        {
-          name: getMonthName(lastMonth), // Previous month name
-          data: lastMonthDaily,
-        },
-      ];
-    });
-
-    // Chart options with proper theme integration
-    const chartOptions = computed(() => {
-      const now = new Date();
-      const currentMonth = now.getMonth();
-      const currentYear = now.getFullYear();
-      const maxDays = daysInMonth(currentYear, currentMonth);
-      const categories = Array.from({ length: maxDays }, (_, i) => i + 1);
-      
-      // Get theme colors directly from Vuetify theme
+    // Category Chart Options
+          const categoryChartOptions = computed(() => {
       const isDark = theme.global.current.value.dark;
-      
-      // Get the actual color values from the theme
-      // Use theme tokens for consistent styling
-      const currentTheme = theme.global.current.value;
       const textColor = isDark ? '#FFFFFF' : '#000000';
-      const gridColor = isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
-      const backgroundColor = isDark ? '#1E1E1E' : '#FFFFFF';
       
       return {
         chart: {
-          id: 'expense-timeline',
-          type: 'line',
+          fontFamily: 'inherit',
+          foreColor: textColor,
+          toolbar: { show: false },
+        },
+        labels: topSpentCategories.value.map(c => {
+          // Truncate long category names only in chart labels, but keep tooltip with full name
+          return c.category.length > 15 ? c.category.slice(0, 12) + '...' : c.category;
+        }),
+        dataLabels: {
+          enabled: false
+        },
+        plotOptions: {
+          pie: {
+            donut: {
+              size: '70%',
+              labels: {
+                show: true,
+                name: { show: false },
+                value: { 
+                  show: true,
+                  formatter: val => formatCurrency(val)
+                },
+                total: { 
+                  show: true,
+                  formatter: w => formatCurrency(
+                    w.globals.seriesTotals.reduce((a, b) => a + b, 0)
+                  )
+                }
+              }
+            }
+          }
+        },
+        legend: {
+          show: false
+        },
+        tooltip: {
+          theme: isDark ? 'dark' : 'light',
+          y: {
+            formatter: val => formatCurrency(val)
+          },
+          custom: function({ series, seriesIndex, dataPointIndex, w }) {
+            // Show full category name in tooltip
+            const category = topSpentCategories.value[seriesIndex].category;
+            const value = formatCurrency(series[seriesIndex]);
+            return `<div class="apexcharts-tooltip-title" style="font-family: inherit; font-size: 12px;">
+                      ${category}
+                    </div>
+                    <div class="apexcharts-tooltip-series-group">
+                      <span class="apexcharts-tooltip-text" style="font-family: inherit; font-size: 12px;">
+                        ${value}
+                      </span>
+                    </div>`;
+          }
+        },
+        colors: getCategoryColors(topSpentCategories.value.length)
+      };
+    });
+
+    const categoryChartSeries = computed(() => {
+      return topSpentCategories.value.map(cat => cat.amount);
+    });
+
+    // Get color for category based on index
+    const getCategoryColor = (index) => {
+      const colors = [
+        '#1976d2', '#4caf50', '#ff9800', '#9c27b0', '#f44336',
+        '#2196f3', '#8bc34a', '#ffc107', '#673ab7', '#e91e63'
+      ];
+      return colors[index % colors.length];
+    };
+
+    // Get an array of colors for categories
+    const getCategoryColors = (count) => {
+      return Array.from({ length: count }, (_, i) => getCategoryColor(i));
+    };
+
+    // Monthly spending timeline data
+    const getDailySpending = (year, month) => {
+      const numDays = daysInMonth(year, month);
+      const dailyTotals = Array(numDays).fill(0);
+      
+      filteredExpenses.value.forEach(e => {
+        const d = adjustForTimezone(e.ExpenseDate);
+        if (d.getMonth() === month && d.getFullYear() === year) {
+          const dayIndex = d.getDate() - 1; // zero-based index
+          const amt = parseNumericValue(e.Amount);
+          dailyTotals[dayIndex] += amt;
+        }
+      });
+      
+      return dailyTotals;
+    };
+
+    // Convert daily totals to cumulative totals
+    const getCumulativeTotals = (dailyTotals) => {
+      let runningTotal = 0;
+      return dailyTotals.map(daily => {
+        runningTotal += daily;
+        return runningTotal;
+      });
+    };
+
+    // Spending series based on selected view
+    const spendingSeries = computed(() => {
+      if (!filteredExpenses.value.length) return [];
+
+      const now = new Date();
+      const currentMonth = now.getMonth();
+      const currentYear = now.getFullYear();
+
+      // Get daily spending for the current month
+      const dailyTotals = getDailySpending(currentYear, currentMonth);
+      
+      // Transform based on selected view
+      const data = timelineView.value === 'Cumulative' 
+        ? getCumulativeTotals(dailyTotals)
+        : dailyTotals;
+      
+      return [{
+        name: timelineView.value === 'Cumulative' ? 'Total Spent' : 'Daily Spending',
+        data
+      }];
+    });
+
+    // Spending chart options
+    const spendingChartOptions = computed(() => {
+      const now = new Date();
+      const currentMonth = now.getMonth();
+      const currentYear = now.getFullYear();
+      const numDays = daysInMonth(currentYear, currentMonth);
+      const categories = Array.from({ length: numDays }, (_, i) => i + 1);
+      
+      // Get theme colors directly from Vuetify theme
+      const isDark = theme.global.current.value.dark;
+      const textColor = isDark ? '#FFFFFF' : '#000000';
+      const gridColor = isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
+      
+      return {
+        chart: {
+          id: 'spending-timeline',
+          type: 'area',
           fontFamily: 'inherit',
           toolbar: { show: false },
           animations: { enabled: true },
           background: 'transparent',
-          foreColor: textColor, // This is key for text colors
+          foreColor: textColor,
         },
-        
-        // Use brand colors for consistency
-        colors: ['#1976d2', '#4caf50'],
-        
-        // Fix tooltip duplication issue while keeping useful information
-        tooltip: { 
-          enabled: true,
-          theme: isDark ? 'dark' : 'light',
-          shared: true, // Use shared tooltip for multiple series
-          intersect: false, // Don't require cursor to intersect exactly
-          custom: undefined, // Remove custom tooltip, use default with formatting
-          x: {
-            show: true,
-            formatter: (val) => `Day ${val}`
-          },
-          y: {
-            formatter: val => formatCurrency(val),
-          },
-          marker: {
-            show: true,
-          },
-          style: {
-            fontSize: '12px',
-            fontFamily: 'inherit'
-          }
-        },
-        
-        // Clean, smooth lines with proper styling
+        colors: ['#4CAF50'],
         stroke: {
           curve: 'smooth',
           width: 3
         },
-        
-        // No data labels on the lines
+        fill: {
+          type: 'gradient',
+          gradient: {
+            shade: isDark ? 'dark' : 'light',
+            type: "vertical",
+            opacityFrom: 0.7,
+            opacityTo: 0.2,
+          }
+        },
         dataLabels: { 
           enabled: false 
         },
-        
-        // X-axis styling
+        tooltip: { 
+          enabled: true,
+          theme: isDark ? 'dark' : 'light',
+          y: {
+            formatter: val => formatCurrency(val),
+          },
+          x: {
+            formatter: val => `Day ${val}`
+          }
+        },
         xaxis: {
-          categories: categories,
+          categories,
+          title: {
+            text: 'Day of Month',
+            style: {
+              color: textColor,
+              fontFamily: 'inherit',
+            }
+          },
           labels: {
             style: {
-              colors: textColor, // Apply color to all labels
+              colors: textColor,
               fontFamily: 'inherit',
+            },
+            formatter: (val) => {
+              // Only show some day labels to avoid crowding
+              return parseInt(val) % 5 === 0 ? val : '';
             }
           },
           axisBorder: {
@@ -437,16 +754,7 @@ const topSpentCategories = computed(() => {
             show: true,
             color: gridColor
           },
-          title: {
-            text: 'Day of Month',
-            style: {
-              color: textColor,
-              fontFamily: 'inherit',
-            }
-          }
         },
-        
-        // Y-axis styling with currency formatter
         yaxis: {
           labels: {
             formatter: (val) => formatCurrency(val),
@@ -454,16 +762,8 @@ const topSpentCategories = computed(() => {
               colors: textColor,
               fontFamily: 'inherit',
             }
-          },
-          title: {
-            style: {
-              color: textColor,
-              fontFamily: 'inherit',
-            }
           }
         },
-        
-        // Grid lines styling - only horizontal lines for money
         grid: {
           show: true,
           borderColor: gridColor,
@@ -471,7 +771,7 @@ const topSpentCategories = computed(() => {
           position: 'back',
           xaxis: {
             lines: {
-              show: false // Turn off vertical grid lines
+              show: false
             }
           },
           yaxis: {
@@ -482,34 +782,11 @@ const topSpentCategories = computed(() => {
           },
           padding: {
             top: 0,
-            right: 0,
+            right: 10,
             bottom: 0,
             left: 10
           }
         },
-        
-        // Legend styling
-        legend: {
-          position: 'top',
-          horizontalAlign: 'center',
-          labels: {
-            colors: textColor
-          },
-          markers: {
-            width: 12,
-            height: 12,
-            radius: 12
-          }
-        },
-        
-        // Data point markers styling
-        markers: {
-          size: 6,
-          strokeWidth: 0,
-          hover: {
-            size: 8
-          }
-        }
       };
     });
 
@@ -520,116 +797,237 @@ const topSpentCategories = computed(() => {
       error,
       expenses,
       activeScopes,
+      selectedScopes,
       totalCash,
       themeKey,
       chartLoading,
+      timelineView,
+      bankAccounts,
+      trackingSince,
 
       // Computed
+      filteredExpenses,
       monthlyTotal,
       topFiveTransactions,
       topSpentCategories,
       scopesSummary,
-      chartSeries,
-      chartOptions,
+      spendingSeries,
+      spendingChartOptions,
+      categoryChartOptions,
+      categoryChartSeries,
+      topCategory,
+      getTrackingSince,
 
       // Methods
       formatCurrency,
       formatDate,
+      formatShortDate,
       amountClass,
       onAccountsFetched,
       adjustForTimezone,
+      getCategoryColor,
+      parseNumericValue,
     };
   },
 };
 </script>
 
 <style scoped>
-/* Summary card styling for consistency */
-.summary-card {
-  height: 150px;
-  padding: 16px;
+/* Info Panel Styling */
+.info-panel {
+  border-radius: 8px;
+}
+
+.info-section {
   display: flex;
   flex-direction: column;
+  align-items: center;
   justify-content: center;
+  padding: 16px;
+  position: relative;
 }
 
-.card-label {
-  font-size: 1rem;
+.info-section:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 20%;
+  height: 60%;
+  width: 1px;
+  background-color: rgba(var(--v-theme-on-surface), 0.1);
+}
+
+.info-title {
+  font-size: 0.875rem;
   font-weight: 500;
-  color: var(--v-theme-on-surface);
   opacity: 0.8;
-  text-align: center;
+  margin-bottom: 8px;
 }
 
-.value-text {
-  font-size: 1.75rem;
+.info-value {
+  font-size: 1.5rem;
   font-weight: 700;
   line-height: 1.2;
-  text-align: center;
 }
 
-.scope-summary {
-  font-size: 0.875rem;
-  color: var(--v-theme-on-surface);
+.info-detail {
+  font-size: 0.75rem;
   opacity: 0.7;
-  text-align: center;
   margin-top: 4px;
+}
+
+.scope-selector-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 4px;
+}
+
+/* Bank accounts styling */
+.bank-accounts-container {
+  width: 100%;
+  max-height: 120px;
+  overflow-y: auto;
+  padding: 4px;
+}
+
+.bank-account-item {
+  display: flex;
+  align-items: center;
+  margin-bottom: 4px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  background-color: rgba(var(--v-theme-surface-variant), 0.3);
+}
+
+.bank-name {
+  flex: 1;
+  font-size: 0.8rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-right: 8px;
+}
+
+.bank-balance {
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+/* Insights container */
+.insights-container {
+  display: flex;
+  flex-direction: column;
+}
+
+.donut-container {
+  height: 200px;
+}
+
+.insights-summary {
+  padding: 8px;
+}
+
+/* Scope filters */
+.scope-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 /* Categories styling */
 .categories-list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 0 8px;
+  gap: 12px;
 }
 
 .category-item {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 4px 0;
+  width: 100%;
 }
 
-.category-name {
+.category-name-container {
+  flex: 1;
+  min-width: 0;
+  margin-right: 12px;
+}
+
+.category-name-wrapper {
   font-size: 0.875rem;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 65%;
+  min-width: 0;
+  white-space: normal;
+  word-break: normal;
+}
+
+.category-bar {
+  height: 16px;
+  min-width: 10px;
+  border-radius: 4px;
+  transition: width 0.3s ease;
 }
 
 .category-amount {
   font-size: 0.875rem;
-  font-weight: 600;
+  font-weight: 500;
   text-align: right;
+  white-space: nowrap;
 }
 
+/* Chart styling */
+.chart-container {
+  height: 200px;
+  position: relative;
+}
 
-/* Transaction item styling */
-.transaction-item {
+.chart-wrapper {
+  position: relative;
+  height: 300px;
+}
+
+/* Recent transactions styling */
+.transaction-row {
   cursor: pointer;
   transition: background-color 0.2s ease;
 }
 
-.transaction-item:hover {
+.transaction-row:hover {
   background-color: rgba(var(--v-theme-on-surface), 0.05);
 }
 
-/* Chart container */
-.chart-wrapper {
-  position: relative;
-  height: 350px;
-  padding: 10px 0;
+/* Layout spacing */
+.hover-elevate {
+  transition: box-shadow 0.3s ease;
 }
 
-/* Make sure chart size is correct */
-:deep(.apexcharts-canvas) {
-  margin: 0 auto !important;
+.hover-elevate:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
-:deep(.apexcharts-inner) {
-  width: 100% !important;
+/* Timeline selector */
+.timeline-selector {
+  max-width: 140px;
 }
 
+/* Utility classes */
+.gap-1 {
+  gap: 4px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 959px) {
+  .info-section:not(:last-child)::after {
+    display: none;
+  }
+  
+  .info-section {
+    border-bottom: 1px solid rgba(var(--v-theme-on-surface), 0.1);
+  }
+  
+  .info-section:last-child {
+    border-bottom: none;
+  }
+}
 </style>

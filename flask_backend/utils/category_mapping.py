@@ -6,9 +6,9 @@ Maps Plaid Personal Finance Categories to app expense categories.
 PLAID_TO_APP_CATEGORY_MAP = {
     # Food & Drink
     "FOOD_AND_DRINK": "Groceries",  # Default mapping
-    "FOOD_AND_DRINK_RESTAURANTS": "Restaurant",
-    "FOOD_AND_DRINK_COFFEE": "Restaurant",
-    "FOOD_AND_DRINK_FAST_FOOD": "Restaurant",
+    "FOOD_AND_DRINK_RESTAURANTS": "Restaurants",
+    "FOOD_AND_DRINK_COFFEE": "Restaurants",
+    "FOOD_AND_DRINK_FAST_FOOD": "Restaurants",
     "FOOD_AND_DRINK_GROCERY": "Groceries",
     "FOOD_AND_DRINK_ALCOHOL": "Alcohol",
     

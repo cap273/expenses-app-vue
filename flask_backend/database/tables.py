@@ -53,6 +53,7 @@ CATEGORY_LIST = [
     "Home Services",
     "Capital Improvements",
     "Landlord Expenses",
+    "Pet Care & Veterinary",
 ]
 
 # Modify expenses_table definition

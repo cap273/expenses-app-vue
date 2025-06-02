@@ -43,7 +43,7 @@
   <v-container fluid style="max-width: 1400px;">
     <v-row>
       <!-- First Quote -->
-      <v-col cols="12" md="4" class="quote-column">
+      <v-col cols="12" md="4" class="quote-column"> <!-- Fit 3 Quotes In a Row -->
         <div class="quote-card">
           <div class="star-rating">
             <v-icon small color="yellow darken-2">mdi-star</v-icon>

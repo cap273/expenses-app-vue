@@ -43,7 +43,7 @@
   <v-container fluid style="max-width: 1400px;">
     <v-row>
       <!-- First Quote -->
-      <v-col cols="12" md="6" class="quote-column">
+      <v-col cols="12" md="4" class="quote-column"> <!-- Fit 3 Quotes In a Row -->
         <div class="quote-card">
           <div class="star-rating">
             <v-icon small color="yellow darken-2">mdi-star</v-icon>
@@ -58,7 +58,7 @@
       </v-col>
 
       <!-- Second Quote -->
-      <v-col cols="12" md="6" class="quote-column">
+      <v-col cols="12" md="4" class="quote-column">
         <div class="quote-card">
           <div class="star-rating">
             <v-icon small color="yellow darken-2">mdi-star</v-icon>
@@ -69,6 +69,21 @@
           </div>
           <p>"A must-have tool for anyone wanting to get a grip on their finances."</p>
           <p><strong>- Janusz G.</strong></p>
+        </div>
+      </v-col>
+
+      <!-- Third Quote -->
+      <v-col cols="12" md="4" class="quote-column">
+        <div class="quote-card">
+          <div class="star-rating">
+            <v-icon small color="yellow darken-2">mdi-star</v-icon>
+            <v-icon small color="yellow darken-2">mdi-star</v-icon>
+            <v-icon small color="yellow darken-2">mdi-star</v-icon>
+            <v-icon small color="yellow darken-2">mdi-star</v-icon>
+            <v-icon small color="yellow darken-2">mdi-star</v-icon>
+          </div>
+          <p>"I couldn't believe how many subscriptions I've been paying for until using this. 10/10!"</p>
+          <p><strong>- Evelyn H.</strong></p>
         </div>
       </v-col>
     </v-row>

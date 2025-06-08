@@ -23,7 +23,7 @@
                        :key="index" 
                        class="bank-account-item">
                     <v-icon size="small" color="primary" class="mr-1">mdi-bank</v-icon>
-                    <span class="bank-name">{{ account.name }}</span>
+                    <span class="bank-name" :title="account.name">{{ account.name }}</span>
                     <span class="bank-balance">{{ formatCurrency(account.balance) }}</span>
                   </div>
                   <div v-if="bankAccounts.length === 0" class="text-caption text-center mt-2">
@@ -197,7 +197,7 @@
                             backgroundColor: getCategoryColor(idx)
                           }"
                         ></div>
-                        <div class="category-name-wrapper ml-2">
+                        <div class="category-name-wrapper ml-2" :title="cat.category">
                           {{ cat.category }}
                         </div>
                       </div>
@@ -842,17 +842,18 @@ export default {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  padding: 16px;
+  justify-content: flex-start;
+  padding: 20px 16px;
   position: relative;
+  min-height: 160px;
 }
 
 .info-section:not(:last-child)::after {
   content: '';
   position: absolute;
   right: 0;
-  top: 20%;
-  height: 60%;
+  top: 25%;
+  height: 50%;
   width: 1px;
   background-color: rgba(var(--v-theme-on-surface), 0.1);
 }
@@ -886,32 +887,68 @@ export default {
 /* Bank accounts styling */
 .bank-accounts-container {
   width: 100%;
-  max-height: 120px;
+  max-width: 320px;
+  max-height: 140px;
   overflow-y: auto;
   padding: 4px;
+  margin-top: 8px;
+}
+
+.bank-accounts-container::-webkit-scrollbar {
+  width: 6px;
+}
+
+.bank-accounts-container::-webkit-scrollbar-track {
+  background: rgba(var(--v-theme-surface-variant), 0.3);
+  border-radius: 3px;
+}
+
+.bank-accounts-container::-webkit-scrollbar-thumb {
+  background: rgba(var(--v-theme-primary), 0.5);
+  border-radius: 3px;
+}
+
+.bank-accounts-container::-webkit-scrollbar-thumb:hover {
+  background: rgba(var(--v-theme-primary), 0.7);
 }
 
 .bank-account-item {
   display: flex;
   align-items: center;
-  margin-bottom: 4px;
-  padding: 4px 8px;
-  border-radius: 4px;
+  margin-bottom: 8px;
+  padding: 10px 12px;
   background-color: rgba(var(--v-theme-surface-variant), 0.3);
+  height: 44px;
+  overflow: hidden;
+  position: relative;
+}
+
+.bank-account-item:hover {
+  background-color: rgba(var(--v-theme-surface-variant), 0.5);
 }
 
 .bank-name {
   flex: 1;
-  font-size: 0.8rem;
+  font-size: 0.75rem;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   margin-right: 8px;
 }
 
+.bank-account-item:hover .bank-name {
+  overflow: visible;
+  white-space: normal;
+  word-break: break-word;
+  background-color: inherit;
+  padding: 2px 4px;
+  border-radius: 2px;
+}
+
 .bank-balance {
-  font-size: 0.8rem;
+  font-size: 0.75rem;
   font-weight: 500;
+  white-space: nowrap;
 }
 
 /* Insights container */
@@ -958,8 +995,11 @@ export default {
 .category-name-wrapper {
   font-size: 0.875rem;
   min-width: 0;
-  white-space: normal;
-  word-break: normal;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.3;
+  max-width: 120px;
 }
 
 .category-bar {

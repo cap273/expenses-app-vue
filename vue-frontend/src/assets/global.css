@@ -111,10 +111,12 @@
   }
   
   .action-buttons {
-    opacity: 0;
+    opacity: 1;
     transition: opacity 0.2s ease;
     display: flex;
     align-items: center;
+    justify-content: center;
+    gap: 2px;
   }
   
   .expense-table :deep(.v-data-table__tr:hover) .action-buttons {

@@ -168,7 +168,7 @@
                     size="small"
                     variant="text"
                     color="grey-darken-1"
-                    class="me-2 action-button"
+                    class="action-button"
                     @click="editExpense(item)"
                   ></v-btn>
                   <v-btn
@@ -349,7 +349,7 @@ export default {
       { title: 'Amount', value: 'Amount' },
       { title: 'Category', value: 'ExpenseCategory', sortable: true },
       { title: 'Notes', value: 'AdditionalNotes', sortable: true },
-      { title: 'Actions', value: 'actions', sortable: false },
+      { title: 'Actions', value: 'actions', sortable: false, width: '120px', align: 'center'},
     ]);
 
     // The array to hold selected rows

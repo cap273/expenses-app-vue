@@ -85,100 +85,136 @@
             >
 <!-- Source Field (Bank Account) -->
             <template #item.Source="{ item }">
-              <div v-if="item.PlaidAccountID" class="account-info">
-                <v-icon small color="primary" class="mr-1">mdi-bank</v-icon>
-                <v-tooltip location="top">
+              <div class="source-cell">
+                <v-tooltip v-if="item.PlaidAccountID" location="top">
                   <template v-slot:activator="{ props }">
-                    <span v-bind="props" class="bank-name">
+                    <v-chip
+                      v-bind="props"
+                      size="small"
+                      color="primary"
+                      variant="tonal"
+                      prepend-icon="mdi-bank"
+                      class="source-chip"
+                    >
                       {{ getBankName(item.PlaidAccountID, plaidAccounts) }}
-                    </span>
+                    </v-chip>
                   </template>
                   <span>{{ getBankAccountDetails(item.PlaidAccountID, plaidAccounts) }}</span>
                 </v-tooltip>
-              </div>
-              <div v-else class="account-info">
-                <v-icon small color="grey">mdi-pencil-box-outline</v-icon>
-                <span class="account-manual">Manual</span>
+                <v-chip
+                  v-else
+                  size="small"
+                  color="grey"
+                  variant="tonal"
+                  prepend-icon="mdi-pencil"
+                  class="source-chip"
+                >
+                  Manual
+                </v-chip>
               </div>
             </template>
             <template #item.Merchant="{ item }">
-              <span v-if="item.PlaidMerchantName || item.PlaidName">
-                {{ item.PlaidMerchantName || item.PlaidName }}
-              </span>
-              <span v-else class="text-disabled">
-                Not available
-              </span>
+              <div class="merchant-cell">
+                <span v-if="item.PlaidMerchantName || item.PlaidName" class="merchant-name">
+                  {{ item.PlaidMerchantName || item.PlaidName }}
+                </span>
+                <span v-else class="merchant-placeholder">
+                  —
+                </span>
+              </div>
             </template>
               <!-- Scope Name Column -->
               <template #item.ScopeName="{ item }">
-                {{ item.ScopeName }}
-                <v-chip
-                  size="x-small"
-                  :color="item.ScopeType === 'personal' ? 'blue' : 'purple'"
-                  class="ml-1"
-                  variant="flat"
-                >
-                  {{ item.ScopeType.charAt(0).toUpperCase() }}
-                </v-chip>
+                <div class="scope-cell">
+                  <v-chip
+                    size="small"
+                    :color="item.ScopeType === 'personal' ? 'blue' : 'purple'"
+                    variant="tonal"
+                    :prepend-icon="item.ScopeType === 'personal' ? 'mdi-account' : 'mdi-home'"
+                  >
+                    {{ item.ScopeName }}
+                  </v-chip>
+                </div>
               </template>
 
               <!-- Expense Date Column -->
               <template #item.ExpenseDate="{ item }">
-                {{ formatDate(adjustForTimezone(item.ExpenseDate)) }}
+                <div class="date-cell">
+                  {{ formatDateSimple(adjustForTimezone(item.ExpenseDate)) }}
+                </div>
               </template>
 
               <!-- Category Column with Icons for Plaid Transactions -->
               <template #item.ExpenseCategory="{ item }">
                 <div class="category-cell">
-                  <span>{{ item.ExpenseCategory || getPlaidCategory(item) }}</span>
-                  <v-tooltip v-if="item.PlaidPersonalFinanceCategoryPrimary" location="top">
+                  <span class="category-text">{{ item.ExpenseCategory || getPlaidCategory(item) }}</span>
+                  <v-tooltip v-if="item.PlaidPersonalFinanceCategoryPrimary && !item.CategoryConfirmed" location="top">
                     <template v-slot:activator="{ props }">
                       <v-icon
                         v-bind="props"
-                        size="small"
-                        color="green"
-                        class="ml-2"
+                        size="16"
+                        color="success"
+                        class="ml-1 category-icon"
                       >
-                        mdi-robot
+                        mdi-robot-outline
                       </v-icon>
                     </template>
                     <span>Auto-categorized by Plaid</span>
-                    </v-tooltip>
-                    <v-tooltip v-else-if="item.PlaidTransactionID && item.CategoryConfirmed" location="top">
-                      <template v-slot:activator="{ props }">
-                        <v-icon
-                          v-bind="props"
-                          size="small"
-                          color="blue"
-                          class="ml-2"
-                        >
-                          mdi-check-circle
-                        </v-icon>
-                      </template>
-                      <span>Category confirmed by you</span>
-                    </v-tooltip>
+                  </v-tooltip>
+                  <v-tooltip v-else-if="item.PlaidTransactionID && item.CategoryConfirmed" location="top">
+                    <template v-slot:activator="{ props }">
+                      <v-icon
+                        v-bind="props"
+                        size="16"
+                        color="primary"
+                        class="ml-1 category-icon"
+                      >
+                        mdi-check-circle-outline
+                      </v-icon>
+                    </template>
+                    <span>Category confirmed by you</span>
+                  </v-tooltip>
+                </div>
+              </template>
+
+              <!-- Notes Column -->
+              <template #item.AdditionalNotes="{ item }">
+                <div class="notes-cell">
+                  <span v-if="item.AdditionalNotes" class="notes-text">
+                    {{ item.AdditionalNotes }}
+                  </span>
+                  <span v-else class="notes-placeholder">—</span>
                 </div>
               </template>
 
               <!-- Actions Column -->
               <template #item.actions="{ item }">
                 <div class="action-buttons">
-                  <v-btn
-                    icon="mdi-pencil"
-                    size="small"
-                    variant="text"
-                    color="grey-darken-1"
-                    class="action-button"
-                    @click="editExpense(item)"
-                  ></v-btn>
-                  <v-btn
-                    icon="mdi-delete"
-                    size="small"
-                    variant="text"
-                    color="grey-darken-1"
-                    class="action-button"
-                    @click="deleteExpense(item.ExpenseID)"
-                  ></v-btn>
+                  <v-menu>
+                    <template v-slot:activator="{ props }">
+                      <v-btn
+                        v-bind="props"
+                        icon="mdi-dots-vertical"
+                        size="small"
+                        variant="text"
+                        density="comfortable"
+                      ></v-btn>
+                    </template>
+                    <v-list density="compact">
+                      <v-list-item @click="editExpense(item)">
+                        <template v-slot:prepend>
+                          <v-icon size="small">mdi-pencil</v-icon>
+                        </template>
+                        <v-list-item-title>Edit</v-list-item-title>
+                      </v-list-item>
+                      <v-list-item @click="deleteExpense(item.ExpenseID)" class="text-error">
+                        <template v-slot:prepend>
+                          <v-icon size="small" color="error">mdi-delete</v-icon>
+                        </template>
+                        <v-list-item-title>Delete</v-list-item-title>
+                      </v-list-item>
+                    </v-list>
+                  </v-menu>
                 </div>
               </template>
             </v-data-table>
@@ -313,14 +349,133 @@
 </template>
 
 <style scoped>
-  /* Circular button styling */
-  .circle-btn {
-    height: 64px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
+/* Circular button styling */
+.circle-btn {
+  height: 64px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Table Cell Styling */
+.source-cell {
+  display: flex;
+  align-items: center;
+  max-width: 140px;
+}
+
+.source-chip {
+  max-width: 100%;
+}
+
+.source-chip :deep(.v-chip__content) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.merchant-cell {
+  max-width: 180px;
+}
+
+.merchant-name {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 500;
+}
+
+.merchant-placeholder {
+  color: rgb(var(--v-theme-on-surface));
+  opacity: 0.6;
+  font-style: italic;
+}
+
+.date-cell {
+  font-variant-numeric: tabular-nums;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.scope-cell {
+  display: flex;
+  align-items: center;
+}
+
+.category-cell {
+  display: flex;
+  align-items: center;
+  max-width: 200px;
+}
+
+.category-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+
+.category-icon {
+  opacity: 0.7;
+  flex-shrink: 0;
+}
+
+.notes-cell {
+  max-width: 150px;
+}
+
+.notes-text {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.875rem;
+}
+
+.notes-placeholder {
+  color: rgb(var(--v-theme-on-surface));
+  opacity: 0.6;
+  font-style: italic;
+}
+
+.action-buttons {
+  display: flex;
+  justify-content: center;
+}
+
+/* Table styling improvements */
+:deep(.v-data-table) {
+  border-radius: 8px;
+}
+
+:deep(.v-data-table-header) {
+  background-color: rgb(var(--v-theme-surface-variant));
+}
+
+:deep(.v-data-table__td) {
+  padding: 8px 16px !important;
+  border-bottom: 1px solid rgba(var(--v-theme-outline), 0.12) !important;
+}
+
+:deep(.v-data-table__th) {
+  padding: 12px 16px !important;
+  font-weight: 600 !important;
+  font-size: 0.875rem !important;
+  color: rgb(var(--v-theme-on-surface)) !important;
+  opacity: 0.8 !important;
+}
+
+:deep(.v-data-table__tr:hover) {
+  background-color: rgba(var(--v-theme-primary), 0.04) !important;
+}
+
+/* Amount column styling */
+:deep(.v-data-table__td[data-column="Amount"]) {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
 </style>
 
 <script>
@@ -342,14 +497,14 @@ export default {
     const search = ref("");
     const expenses = ref([]);
     const headers = ref([
-      { title: 'Source', value: 'Source', sortable: true },
-      { title: 'Merchant/Vendor', value: 'Merchant', sortable: true }, // Add this new column
-      { title: 'Scope', value: 'ScopeName', sortable: true },
-      { title: 'Date', value: 'ExpenseDate', sortable: true },
-      { title: 'Amount', value: 'Amount' },
-      { title: 'Category', value: 'ExpenseCategory', sortable: true },
-      { title: 'Notes', value: 'AdditionalNotes', sortable: true },
-      { title: 'Actions', value: 'actions', sortable: false, width: '120px', align: 'center'},
+      { title: 'Source', value: 'Source', sortable: false, width: '140px' },
+      { title: 'Date', value: 'ExpenseDate', sortable: true, width: '100px' },
+      { title: 'Merchant', value: 'Merchant', sortable: true, width: '180px' },
+      { title: 'Amount', value: 'Amount', sortable: true, width: '120px', align: 'end' },
+      { title: 'Category', value: 'ExpenseCategory', sortable: true, width: '200px' },
+      { title: 'Scope', value: 'ScopeName', sortable: true, width: '120px' },
+      { title: 'Notes', value: 'AdditionalNotes', sortable: false, width: '150px' },
+      { title: '', value: 'actions', sortable: false, width: '80px', align: 'center'},
     ]);
 
     // The array to hold selected rows
@@ -711,6 +866,20 @@ export default {
       updateMonthGroups();
     });
 
+    // Simple date formatting for table display
+    const formatDateSimple = (date) => {
+      if (!date) return '—';
+      try {
+        const d = new Date(date);
+        return d.toLocaleDateString('en-US', {
+          month: 'short',
+          day: 'numeric'
+        });
+      } catch (e) {
+        return '—';
+      }
+    };
+
     onMounted(async () => {
       await Promise.all([
         fetchExpenses(),
@@ -756,6 +925,7 @@ export default {
       getBankAccountDetails,
       getPlaidCategory,
       formatDate,
+      formatDateSimple,
 
       // Data
       categories,

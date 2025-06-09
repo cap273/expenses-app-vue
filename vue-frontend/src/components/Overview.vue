@@ -193,11 +193,11 @@
                       <div class="d-flex align-center category-name-container">
                         <div class="category-bar" 
                           :style="{
-                            width: `${(cat.amount / topSpentCategories[0].amount) * 100}%`,
+                            width: `${Math.max(10, (cat.amount / topSpentCategories[0].amount) * 60)}%`,
                             backgroundColor: getCategoryColor(idx)
                           }"
                         ></div>
-                        <div class="category-name-wrapper ml-2" :title="cat.category">
+                        <div class="category-name-wrapper ml-2">
                           {{ cat.category }}
                         </div>
                       </div>
@@ -996,10 +996,8 @@ export default {
   font-size: 0.875rem;
   min-width: 0;
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
   line-height: 1.3;
-  max-width: 120px;
+  flex: 1;
 }
 
 .category-bar {

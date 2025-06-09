@@ -155,6 +155,7 @@ def submit_new_expenses():
                         year = expense.get("year")
                         amount = expense.get("amount")
                         category = expense.get("category")
+                        merchant = expense.get("merchant", "")
                         notes = expense.get("notes")
 
                         # Validation
@@ -219,6 +220,7 @@ def submit_new_expenses():
                                 ExpenseDate=expense_date,
                                 Amount=float(amount.replace(",", "")),
                                 ExpenseCategory=category,
+                                PlaidMerchantName=merchant if merchant else None,  # Store merchant in Plaid field for consistency
                                 AdditionalNotes=notes,
                                 Currency=current_user.currency,
                                 CreateDate=datetime.now().date(),
@@ -507,6 +509,7 @@ def update_expense():
         year = expense.get("year")
         amount = expense.get("amount")
         category = expense.get("category")
+        merchant = expense.get("merchant", "")
         notes = expense.get("notes")
 
         expense_date = datetime.strptime(f"{year}-{month}-{day}", "%Y-%B-%d").date()
@@ -525,6 +528,7 @@ def update_expense():
                     ExpenseDate=expense_date,
                     Amount=float(amount.replace(",", "")),
                     ExpenseCategory=category,
+                    PlaidMerchantName=merchant if merchant else None,
                     AdditionalNotes=notes,
                     LastUpdated=datetime.now().date(),
                     CategoryConfirmed=True  # Set to True when manually edited (for plaid automatic transactions)

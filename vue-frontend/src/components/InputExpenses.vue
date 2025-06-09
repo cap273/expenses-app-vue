@@ -1,314 +1,333 @@
 <template>
-    <v-container class="rounded-box-embed">
-        <h2 class="expenses-header text-center">Input New Expenses</h2>
+  <div class="expense-input-container">
+    <v-container class="pa-0">
+      <!-- Response Message -->
+      <v-alert
+        v-if="responseMessage.message"
+        :type="responseMessage.type"
+        class="mb-6"
+        dismissible
+        @click:close="responseMessage.message = ''"
+      >
+        {{ responseMessage.message }}
+      </v-alert>
 
-        <!-- Response Message -->
-        <div v-if="responseMessage.message" :class="{'text-success': responseMessage.type === 'success', 'text-error': responseMessage.type === 'error'}">
-            {{ responseMessage.message }}
-        </div>
-
-        <v-form ref="form" id="expensesForm" @submit.prevent="submitExpenses">
-            <!-- Desktop view -->
-            <div class="d-none d-md-block">
-                <v-table dense class="elevation-1 tight-table">
-                    <thead>
-                    <tr>
-                        <th class="column-scope">Scope</th>
-                        <th class="column-day">Day</th>
-                        <th class="column-month">Month</th>
-                        <th class="column-year">Year</th>
-                        <th class="column-amount">Amount</th>
-                        <th class="column-category">Category</th>
-                        <th class="column-notes">Notes</th>
-                        <th class="column-set-date">Today</th>
-                    </tr>
-                    </thead>
-                    <tbody>
-                    <tr v-for="(expense, index) in expenses" :key="`row-${index}-${expense.rowKey}`">
-                        <!-- Expense Scope Dropdown -->
-                        <td>
-                            <v-select
-                            v-model="expense.scope"
-                            :items="scopes"
-                            item-title="name"
-                            item-value="id"
-                            label="Select Scope"
-                            :rules="[rules.scope]"
-                            class="input-field input-field--scope"
-                            ></v-select>
-                        </td>
-                        <!-- Day Field -->
-                        <td>
-                            <v-text-field
-                            v-model="expense.day"
-                            type="number"
-                            :rules="[rules.day]"
-                            class="input-field input-field--day"
-                            hide-spin-buttons
-                            ></v-text-field>
-                        </td>
-                        <!-- Month Dropdown -->
-                        <td>
-                        <v-select
-                            v-model="expense.month"
-                            :items="months"
-                            :rules="[rules.month]"
-                            class="input-field input-field--month"
-                        ></v-select>
-                        </td>
-                        <!-- Year Field -->
-                        <td>
-                            <v-text-field
-                            v-model="expense.year"
-                            type="number"
-                            :rules="[rules.year]"
-                            class="input-field input-field--year"
-                            hide-spin-buttons
-                            ></v-text-field>
-                        </td>
-                        <!-- Amount Field -->
-                        <td>
-                            <v-text-field
-                            v-model="expense.amount"
-                            type="text"
-                            :rules="[rules.amount]"
-                            class="input-field input-field--amount"
-                            :prepend-inner-icon="'mdi-currency-usd'"
-                            ></v-text-field>
-                        </td>
-                        <!-- Expense Category Dropdown -->
-                        <td>
-                        <v-select
-                            v-model="expense.category"
-                            :items="categories"
-                            :rules="[rules.category]"
-                            class="input-field input-field--category"
-                        ></v-select>
-                        </td>
-                        <!-- Additional Notes Field -->
-                        <td>
-                        <v-text-field
-                            v-model="expense.notes"
-                            class="input-field input-field--notes"
-                        ></v-text-field>
-                        </td>
-                        <td class="today-button-cell">
-                            <v-btn 
-                                small 
-                                @click="setCurrentDate(expense)"
-                                class="today-btn"
-                                density="compact"
-                            >Today</v-btn>
-                        </td>
-                    </tr>
-                </tbody>
-                </v-table>
-            </div>
-
-            <!-- Mobile view -->
-            <div class="d-md-none">
-                <div v-for="(expense, index) in expenses" :key="`row-mobile-${index}-${expense.rowKey}`" class="mobile-expense-form">
-                    <v-select
-                        v-model="expense.scope"
-                        :items="scopes"
-                        item-title="name"
-                        item-value="id"
-                        label="Select Scope"
-                        :rules="[rules.scope]"
-                        class="mb-2"
-                    ></v-select>
-
-                    <div class="date-fields">
-                        <v-text-field
-                            v-model="expense.day"
-                            type="number"
-                            label="Day"
-                            :rules="[rules.day]"
-                            class="date-field"
-                            hide-spin-buttons
-                        ></v-text-field>
-
-                        <v-select
-                            v-model="expense.month"
-                            :items="months"
-                            label="Month"
-                            :rules="[rules.month]"
-                            class="date-field"
-                        ></v-select>
-
-                        <v-text-field
-                            v-model="expense.year"
-                            type="number"
-                            label="Year"
-                            :rules="[rules.year]"
-                            class="date-field"
-                            hide-spin-buttons
-                        ></v-text-field>
-
-                        <v-btn small @click="setCurrentDate(expense)" class="today-btn">Today</v-btn>
-                    </div>
-
-                    <v-text-field
-                        v-model="expense.amount"
-                        type="text"
-                        label="Amount"
-                        :rules="[rules.amount]"
-                        :prepend-inner-icon="'mdi-currency-usd'"
-                        class="mb-2"
-                    ></v-text-field>
-
-                    <v-select
-                        v-model="expense.category"
-                        :items="categories"
-                        label="Category"
-                        :rules="[rules.category]"
-                        class="mb-2"
-                    ></v-select>
-
-                    <v-text-field
-                        v-model="expense.notes"
-                        label="Notes"
-                        class="mb-2"
-                    ></v-text-field>
-
-                    <v-divider class="my-4"></v-divider>
+      <v-form ref="form" @submit.prevent="submitExpenses">
+          <!-- Expense Cards -->
+          <div v-for="(expense, index) in expenses" :key="`expense-${index}-${expense.rowKey}`" class="expense-card-container">
+            <v-card class="expense-card hover-elevate mb-4" elevation="2">
+              <v-card-title class="pb-2">
+                <div class="d-flex justify-space-between align-center w-100">
+                  <span class="expense-title">
+                    {{ expenses.length > 1 ? `Expense ${index + 1}` : 'Expense Details' }}
+                  </span>
+                  <div v-if="expenses.length > 1" class="card-actions">
+                    <v-btn
+                      icon="mdi-delete"
+                      size="small"
+                      variant="text"
+                      color="error"
+                      @click="removeExpense(index)"
+                      class="ml-2"
+                    ></v-btn>
+                  </div>
                 </div>
-            </div>
+              </v-card-title>
 
-            <v-row justify="center" class="button-row">
-                <v-col cols="auto">
-                    <v-btn class="mx-2" type="button" @click="addRow">Add Row</v-btn>
-                </v-col>
-                <v-col cols="auto">
-                    <v-btn class="mx-2" type="button" @click="deleteRow">Delete Last Row</v-btn>
-                </v-col>
-                <v-col cols="auto">
-                    <v-btn class="mx-2" type="button" @click="clearLastRow">Clear Last Row</v-btn>
-                </v-col>
-                <v-col cols="auto">
-                    <v-btn class="mx-2" 
-                    type="submit" 
-                    color="primary"
-                    :loading="loading"
-                    >Submit</v-btn>
-                </v-col>
+              <v-card-text class="pt-0">
+                <v-row>
+                  <!-- Scope Selection -->
+                  <v-col cols="12" md="6">
+                    <v-select
+                      v-model="expense.scope"
+                      :items="scopes"
+                      item-title="name"
+                      item-value="id"
+                      label="Expense Scope"
+                      :rules="[rules.scope]"
+                      variant="outlined"
+                      density="comfortable"
+                      prepend-inner-icon="mdi-account-group"
+                    ></v-select>
+                  </v-col>
+
+                  <!-- Date Picker -->
+                  <v-col cols="12" md="6">
+                    <v-text-field
+                      v-model="expense.dateFormatted"
+                      label="Date"
+                      :rules="[rules.date]"
+                      variant="outlined"
+                      density="comfortable"
+                      prepend-inner-icon="mdi-calendar"
+                      readonly
+                      @click="openDatePicker(index)"
+                      class="date-input"
+                    >
+                      <template v-slot:append-inner>
+                        <v-btn
+                          icon="mdi-calendar-today"
+                          size="small"
+                          variant="text"
+                          @click="setCurrentDate(expense)"
+                          class="today-btn"
+                        ></v-btn>
+                      </template>
+                    </v-text-field>
+
+                    <!-- Date Picker Dialog -->
+                    <v-dialog
+                      v-model="expense.showDatePicker"
+                      max-width="320px"
+                    >
+                      <v-date-picker
+                        v-model="expense.dateObject"
+                        @update:model-value="updateDate(expense)"
+                        show-adjacent-months
+                        class="elevation-15"
+                      ></v-date-picker>
+                    </v-dialog>
+                  </v-col>
+
+                  <!-- Amount -->
+                  <v-col cols="12" md="6">
+                    <v-text-field
+                      v-model="expense.amount"
+                      label="Amount"
+                      :rules="[rules.amount]"
+                      variant="outlined"
+                      density="comfortable"
+                      prepend-inner-icon="mdi-currency-usd"
+                      placeholder="0.00"
+                      @input="formatAmount(expense, $event)"
+                    ></v-text-field>
+                  </v-col>
+
+                  <!-- Merchant/Vendor -->
+                  <v-col cols="12" md="6">
+                    <v-text-field
+                      v-model="expense.merchant"
+                      label="Merchant/Vendor"
+                      variant="outlined"
+                      density="comfortable"
+                      prepend-inner-icon="mdi-store"
+                      placeholder="Where did you spend?"
+                    ></v-text-field>
+                  </v-col>
+
+                  <!-- Category -->
+                  <v-col cols="12" md="6">
+                    <v-select
+                      v-model="expense.category"
+                      :items="categories"
+                      label="Category"
+                      :rules="[rules.category]"
+                      variant="outlined"
+                      density="comfortable"
+                      prepend-inner-icon="mdi-tag"
+                    ></v-select>
+                  </v-col>
+
+                  <!-- Notes -->
+                  <v-col cols="12">
+                    <v-textarea
+                      v-model="expense.notes"
+                      label="Notes (optional)"
+                      variant="outlined"
+                      density="comfortable"
+                      rows="2"
+                      prepend-inner-icon="mdi-note-text"
+                      placeholder="Add any additional details..."
+                    ></v-textarea>
+                  </v-col>
+                </v-row>
+              </v-card-text>
+            </v-card>
+          </div>
+
+          <!-- Action Buttons -->
+          <div class="action-buttons-container">
+            <v-row justify="center" class="mb-4">
+              <v-col cols="auto">
+                <v-btn
+                  variant="outlined"
+                  color="primary"
+                  @click="addExpense"
+                  prepend-icon="mdi-plus"
+                  class="mx-2"
+                >
+                  Add Another
+                </v-btn>
+              </v-col>
+              <v-col cols="auto">
+                <v-btn
+                  variant="outlined"
+                  color="secondary"
+                  @click="clearForm"
+                  prepend-icon="mdi-refresh"
+                  class="mx-2"
+                >
+                  Clear All
+                </v-btn>
+              </v-col>
             </v-row>
-        </v-form>
+
+            <v-row justify="center">
+              <v-col cols="auto">
+                <v-btn
+                  type="submit"
+                  color="primary"
+                  size="large"
+                  :loading="loading"
+                  :disabled="!canSubmit"
+                  prepend-icon="mdi-content-save"
+                  class="submit-btn"
+                >
+                  Save {{ expenses.length }} Expense{{ expenses.length !== 1 ? 's' : '' }}
+                </v-btn>
+              </v-col>
+            </v-row>
+        </div>
+      </v-form>
     </v-container>
+  </div>
 </template>
 
 <style scoped>
-.expenses-header {
-    margin-bottom: 20px;
-    color: rgb(var(--v-theme-on-background));
+/* Main Layout */
+.expense-input-container {
+  background: transparent;
+  width: 100%;
 }
 
-.rounded-box-embed {
-    background-color: rgb(var(--v-theme-surface));
-    color: rgb(var(--v-theme-on-surface));
+/* Expense Cards */
+.expense-card-container {
+  position: relative;
+}
+
+.expense-card {
+  background-color: rgb(var(--v-theme-surface));
   border-radius: 12px;
-  padding: 20px;
-  margin-bottom: 20px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(var(--v-theme-outline), 0.2);
 }
 
-
-.tight-table {
-    table-layout: fixed;
-    width: 100%;
-    border-radius: 12px;
-    background-color: var(--v-surface-color) !important;
+.expense-title {
+  font-size: 1.125rem;
+  font-weight: 500;
+  color: rgb(var(--v-theme-on-surface-variant));
 }
 
-/* Column width definitions for desktop view */
-.column-scope { width: 20%; }
-.column-day { width: 8%; }
-.column-month { width: 12%; }
-.column-year { width: 8%; }
-.column-amount { width: 12%; }
-.column-category { width: 20%; }
-.column-notes { width: 15%; }
-.column-set-date { width: 5%; }
-
-.text-success {
-    color: darkgreen;
+.card-actions {
+  display: flex;
+  align-items: center;
 }
 
-.text-error {
-    color: red;
+/* Form Elements */
+.date-input {
+  cursor: pointer;
 }
 
-/* Tight spacing for table cells */
-.tight-table th,
-.tight-table td {
-    padding: 4px 8px !important;
-}
-
-/* Input field styles */
-.input-field {
-    margin: 0;
-    padding: 4px 0;
-}
-
-
-/* Mobile view styles */
-.mobile-expense-form {
-    margin-bottom: 16px;
-    padding: 16px;
-    background-color: rgb(var(--v-theme-surface));
-  border: 1px solid rgb(var(--v-theme-surface-variant));
-    border-radius: 8px;
-}
-
-.date-fields {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(70px, 1fr));
-    gap: 8px;
-    margin-bottom: 16px;
-}
-
-.date-field {
-    min-width: 70px;
-}
-
-.today-button-cell {
-    vertical-align: middle;
-    height: 100%;
-    padding-top: 12px !important; /* Adjust based on your specific needs */
-    margin: 0;
-    /* Ensure the button height matches other elements */
-    height: 32px;
+.date-input :deep(.v-field__input) {
+  cursor: pointer;
 }
 
 .today-btn {
-    align-self: center;
-    height:40px;
-    margin-bottom:15px;
-    background-color: var(--v-surface-variant-color) !important;
-    color: var(--v-on-surface-variant-color) !important;
-
+  opacity: 0.7;
+  transition: opacity 0.2s ease;
 }
 
-/* Button row spacing */
-.button-row {
-    margin-top: 16px;
+.today-btn:hover {
+  opacity: 1;
 }
 
-
-/* Utility classes */
-.mb-2 {
-    margin-bottom: 8px;
+/* Action Buttons */
+.action-buttons-container {
+  margin-top: 32px;
+  padding-top: 24px;
+  border-top: 1px solid rgba(var(--v-theme-outline), 0.12);
 }
 
-.my-4 {
-    margin-top: 16px;
+.submit-btn {
+  min-width: 200px;
+  height: 48px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+/* Responsive Design */
+@media (max-width: 959px) {
+  .content-box {
+    padding: 20px;
+  }
+  
+  .section-title {
+    font-size: 1.5rem;
+  }
+  
+  .expense-card {
     margin-bottom: 16px;
+  }
+  
+  .action-buttons-container {
+    margin-top: 24px;
+    padding-top: 16px;
+  }
 }
 
+@media (max-width: 600px) {
+  .page-background {
+    padding: 16px;
+  }
+  
+  .content-box {
+    padding: 16px;
+  }
+  
+  .section-title {
+    font-size: 1.375rem;
+    margin-bottom: 24px;
+  }
+  
+  .expense-card {
+    border-radius: 12px;
+  }
+  
+  .submit-btn {
+    min-width: 160px;
+    width: 100%;
+    max-width: 280px;
+  }
+}
 
+/* Form Field Improvements */
+:deep(.v-field--variant-outlined) {
+  background-color: rgb(var(--v-theme-surface));
+}
+
+:deep(.v-field--variant-outlined .v-field__outline) {
+  border-color: rgba(var(--v-theme-outline), 0.3);
+}
+
+:deep(.v-field--variant-outlined:hover .v-field__outline) {
+  border-color: rgba(var(--v-theme-primary), 0.5);
+}
+
+:deep(.v-field--variant-outlined.v-field--focused .v-field__outline) {
+  border-color: rgb(var(--v-theme-primary));
+}
+
+/* Loading and Disabled States */
+.submit-btn:disabled {
+  opacity: 0.6;
+}
+
+/* Success/Error Animations */
+.v-alert {
+  border-radius: 12px;
+}
 </style>
 <script>
-import { ref, onMounted, watch } from 'vue';
+import { ref, onMounted, watch, computed } from 'vue';
 
 export default {
     //nExpenseData prop added to edit existing expense
@@ -336,50 +355,71 @@ export default {
         // Reference to the form element to reset form validation after submission
         const form = ref(null);
 
-        // Reference to a single row in the submit expenses row.
-        // rowKey property is used to reset form validation when clearing a row of its data
-        const expenses = ref([{ 
-            scope: '', day: '', month: '', year: '', amount: '', category: '', notes: '', 
-            rowKey: 0 ,ExpenseID: null,
-        }]);
+        // Initialize months first
         const months = ref(['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']);
+        
+        // Helper function to format date for display
+        function formatDateForDisplay(date) {
+            if (!date) return '';
+            return date.toLocaleDateString('en-US', {
+                weekday: 'short',
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric'
+            });
+        }
+        
+        // Helper function to create a new expense with default values
+        function createNewExpense() {
+            const today = new Date();
+            return {
+                scope: '',
+                dateObject: today,
+                dateFormatted: formatDateForDisplay(today),
+                day: today.getDate(),
+                month: months.value[today.getMonth()],
+                year: today.getFullYear(),
+                amount: '',
+                category: '',
+                merchant: '',
+                notes: '',
+                rowKey: Date.now(),
+                ExpenseID: null,
+                showDatePicker: false
+            };
+        }
+        
+        // Reference to expense data structure
+        const expenses = ref([createNewExpense()]);
         
         //watch for changes in expenseData prop to populate the form
         watch(
-      () => props.expenseData,
-      (newVal) => {
-        if (newVal) {
-            console.log('Received expenseData:', newVal);
-          expenses.value = [{
-            scope: newVal.ScopeID || '',
-            day: newVal.Day || '',
-            month: newVal.Month || '',
-            year: newVal.Year || '',
-            amount: newVal.Amount ? newVal.Amount.replace(/[^0-9.]/g, '') : '',
-            category: newVal.ExpenseCategory || '',
-            notes: newVal.AdditionalNotes || '',
-            ExpenseID: newVal.ExpenseID,
-          }];
-        }
-        else {
-          // If no expenseData, reset the form
-          expenses.value = [
-            {
-              scope: '',
-              day: '',
-              month: '',
-              year: '',
-              amount: '',
-              category: '',
-              notes: '',
-              rowKey: 0,
-              ExpenseID: null,
+            () => props.expenseData,
+            (newVal) => {
+                if (newVal) {
+                    console.log('Received expenseData:', newVal);
+                    const expenseDate = new Date(newVal.Year, months.value.indexOf(newVal.Month), newVal.Day);
+                    expenses.value = [{
+                        scope: newVal.ScopeID || '',
+                        dateObject: expenseDate,
+                        dateFormatted: formatDateForDisplay(expenseDate),
+                        day: newVal.Day || '',
+                        month: newVal.Month || '',
+                        year: newVal.Year || '',
+                        amount: newVal.Amount ? newVal.Amount.replace(/[^0-9.]/g, '') : '',
+                        category: newVal.ExpenseCategory || '',
+                        merchant: newVal.PlaidMerchantName || newVal.PlaidName || '',
+                        notes: newVal.AdditionalNotes || '',
+                        ExpenseID: newVal.ExpenseID,
+                        showDatePicker: false
+                    }];
+                } else {
+                    // If no expenseData, reset the form
+                    expenses.value = [createNewExpense()];
+                }
             },
-          ];
-        }
-      },
-      { immediate: true }
-    );
+            { immediate: true }
+        );
         // Update fetchScopes to use the new API
         const fetchScopes = async () => {
         try {
@@ -418,79 +458,102 @@ export default {
         const rules = {
             required: value => !!value || 'Required.',
             scope: value => {
-                return value !== null && value !== undefined && value !== '' || 'Scope is required';
+                return value !== null && value !== undefined && value !== '' || 'Please select a scope';
             },
-            day: value => {
-                if (!value) return 'Day is required';
-                if (isNaN(value)) return 'Day must be a number';
-                return (value >= 1 && value <= 31) || 'Day must be between 1 and 31';
-            },
-            month: value => {
-                if (!value) return 'Month is required';
-                return months.value.includes(value) || 'Invalid month selected';
-            },
-            year: value => {
-                if (!value) return 'Year is required';
-                if (isNaN(value)) return 'Year must be a number';
-                return (value >= 2000 && value <= 2050) || 'Year must be between 2000 and 2050';
+            date: value => {
+                return !!value || 'Please select a date';
             },
             amount: value => {
                 if (!value) return 'Amount is required';
-                const numericValue = parseFloat(value);
-                if (isNaN(numericValue)) return 'Amount must be a valid number';
-                if (numericValue < 0) return 'Amount cannot be negative';
-                if (!/^\d*\.?\d{0,2}$/.test(value)) return 'Amount must be a non-negative number with at most two decimal places';
+                const cleanValue = value.replace(/[^0-9.]/g, '');
+                const numericValue = parseFloat(cleanValue);
+                if (isNaN(numericValue)) return 'Please enter a valid amount';
+                if (numericValue <= 0) return 'Amount must be greater than 0';
+                if (!/^\d*\.?\d{0,2}$/.test(cleanValue)) return 'Amount can have at most 2 decimal places';
                 return true;
             },
             category: value => {
-                return value !== null && value !== undefined && value !== '' || 'Expense Category is required';
+                return value !== null && value !== undefined && value !== '' || 'Please select a category';
             },
         };
-
-
-        const addRow = () => {
-        const lastExpense = expenses.value[expenses.value.length - 1];
-        expenses.value.push({ 
-            scope: lastExpense.scope, 
-            day: '', 
-            month: lastExpense.month, 
-            year: lastExpense.year, 
-            amount: '', 
-            category: '', 
-            notes: '' 
+        
+        // Computed property to check if form can be submitted
+        const canSubmit = computed(() => {
+            return expenses.value.every(expense => 
+                expense.scope && 
+                expense.dateFormatted && 
+                expense.amount && 
+                expense.category
+            ) && !loading.value;
         });
+
+
+        // Enhanced form management functions
+        const addExpense = () => {
+            const lastExpense = expenses.value[expenses.value.length - 1];
+            const newExpense = createNewExpense();
+            // Carry over scope from previous expense for convenience
+            if (lastExpense.scope) {
+                newExpense.scope = lastExpense.scope;
+            }
+            expenses.value.push(newExpense);
         };
 
-        const deleteRow = () => {
+        const removeExpense = (index) => {
             if (expenses.value.length > 1) {
-                expenses.value.pop();
+                expenses.value.splice(index, 1);
             }
         };
 
-        const clearLastRow = () => {
-            const lastExpenseIndex = expenses.value.length - 1;
-            if (lastExpenseIndex >= 0) {
-                expenses.value[lastExpenseIndex] = { 
-                scope: '', day: '', month: '', year: '', amount: '', category: '', notes: '',
-                rowKey: expenses.value[lastExpenseIndex].rowKey + 1
-                };
+        const clearForm = () => {
+            expenses.value = [createNewExpense()];
+            if (form.value) {
+                form.value.reset();
             }
         };
+        
+        // Date picker functions
+        const openDatePicker = (index) => {
+            expenses.value[index].showDatePicker = true;
+        };
+        
+        const updateDate = (expense) => {
+            if (expense.dateObject) {
+                expense.dateFormatted = formatDateForDisplay(expense.dateObject);
+                expense.day = expense.dateObject.getDate();
+                expense.month = months.value[expense.dateObject.getMonth()];
+                expense.year = expense.dateObject.getFullYear();
+            }
+            expense.showDatePicker = false;
+        };
+        
+        // Amount formatting function
+        const formatAmount = (expense, event) => {
+            let value = event.target.value;
+            // Remove any non-numeric characters except decimal point
+            value = value.replace(/[^0-9.]/g, '');
+            // Ensure only one decimal point
+            const parts = value.split('.');
+            if (parts.length > 2) {
+                value = parts[0] + '.' + parts.slice(1).join('');
+            }
+            // Limit to 2 decimal places
+            if (parts[1] && parts[1].length > 2) {
+                value = parts[0] + '.' + parts[1].substring(0, 2);
+            }
+            expense.amount = value;
+        };
 
-        // Custom validation method for the form, because built-in Vuetify's validate()
-        // method does not work with v-for
+        // Enhanced form validation
         const isFormValid = () => {
             for (let expense of expenses.value) {
-                // Check each rule; if the rule returns a string (error message), it means validation failed
-                if (typeof rules.required(expense.scope) === 'string' ||
-                    typeof rules.day(expense.day) === 'string' ||
-                    typeof rules.year(expense.year) === 'string' ||
-                    typeof rules.amount(expense.amount) === 'string') {
-                    // Validation failed
+                if (typeof rules.scope(expense.scope) === 'string' ||
+                    typeof rules.date(expense.dateFormatted) === 'string' ||
+                    typeof rules.amount(expense.amount) === 'string' ||
+                    typeof rules.category(expense.category) === 'string') {
                     return false;
                 }
             }
-            // All validations passed
             return true;
         };
 
@@ -538,12 +601,18 @@ export default {
                 console.log('Server response:', responseData);
                 
                 if (responseData.success) {
-                    expenses.value = [{ scope: '', day: '', month: '', year: '', amount: '', category: '', notes: '' }]; // Clear the form
+                    expenses.value = [createNewExpense()]; // Clear the form with fresh expense
                     responseMessage.value = { message: responseData.message, type: 'success' };
 
                     if (form.value) {
                         form.value.reset(); // Reset the form validation
                     }
+                    
+                    // Auto-hide success message after 5 seconds
+                    setTimeout(() => {
+                        responseMessage.value = { message: '', type: '' };
+                    }, 5000);
+                    
                     //New emit for updating expenses
                     emit('update-expenses');
                 } else {
@@ -563,13 +632,15 @@ export default {
             fetchCategories();
         });
 
-        //current date function
-         function setCurrentDate(expense) {
+        // Enhanced current date function
+        function setCurrentDate(expense) {
             const today = new Date();
+            expense.dateObject = today;
+            expense.dateFormatted = formatDateForDisplay(today);
             expense.day = today.getDate();
             expense.month = months.value[today.getMonth()];
             expense.year = today.getFullYear();
-            }
+        }
 
         return { 
             expenses,
@@ -580,11 +651,17 @@ export default {
             loading,
             responseMessage,
             form,
-            addRow, 
-            deleteRow, 
-            clearLastRow,
+            canSubmit,
+            addExpense,
+            removeExpense,
+            clearForm,
+            openDatePicker,
+            updateDate,
+            formatAmount,
             submitExpenses,
             setCurrentDate,
+            formatDateForDisplay,
+            createNewExpense,
         };
     }
 };

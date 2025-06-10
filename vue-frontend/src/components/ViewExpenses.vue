@@ -7,37 +7,75 @@
       </div>
 
       <div class="content-box">
-        <div class="search-add-container">
-          <v-btn
-            color="primary"
-            @click="toggleAddExpense"
-            class="mr-2 circle-btn"
-            width="0"
-          >
-            <v-icon :class="{'rotate-icon': showAddExpense}">
-              mdi-plus
-            </v-icon>
-          </v-btn>
-          <v-text-field
-            v-model="search"
-            label="Search"
-            class="search-bar"
-            outlined
-            dense
-            hide-details="auto"
-            style="margin-bottom:0; margin-left:20px"
-          ></v-text-field>
+        <div class="toolbar-container">
+          <!-- Left side - Action Buttons (matching chart style) -->
+          <div class="left-actions">
+            <!-- Add Expense Button -->
+            <v-tooltip text="Add New Expense" location="top">
+              <template v-slot:activator="{ props }">
+                <v-btn
+                  v-bind="props"
+                  icon
+                  @click="openAddExpenseDialog"
+                  class="mr-2"
+                >
+                  <v-icon>mdi-plus</v-icon>
+                </v-btn>
+              </template>
+            </v-tooltip>
 
-          <!-- Action Buttons -->
-          <v-btn-group v-if="selectedExpenses.length > 0" style="margin-left:20px;">
-            <v-btn color="warning" @click="openBulkEditDialog" >
-              <v-icon left>mdi-pencil</v-icon>
-              ({{ selectedExpenses.length }})
-            </v-btn>
-            <v-btn color="error" @click="deleteSelectedExpenses">
-              <v-icon left>mdi-trash-can</v-icon>
-            </v-btn>
-          </v-btn-group>
+            <!-- Export Button -->
+            <v-tooltip text="Export to CSV" location="top">
+              <template v-slot:activator="{ props }">
+                <v-btn
+                  v-bind="props"
+                  icon
+                  @click="openExportDialog"
+                  class="mr-2"
+                >
+                  <v-icon>mdi-download</v-icon>
+                </v-btn>
+              </template>
+            </v-tooltip>
+          </div>
+
+          <!-- Center - Search Bar -->
+          <div class="search-container">
+            <v-text-field
+              v-model="search"
+              placeholder="Search expenses..."
+              variant="outlined"
+              density="comfortable"
+              prepend-inner-icon="mdi-magnify"
+              clearable
+              hide-details
+              class="search-field"
+            ></v-text-field>
+          </div>
+
+          <!-- Right side - Selected Actions -->
+          <div class="right-actions">
+            <v-btn-group v-if="selectedExpenses.length > 0">
+              <v-btn 
+                color="warning" 
+                variant="outlined"
+                @click="openBulkEditDialog"
+                prepend-icon="mdi-pencil"
+                size="small"
+              >
+                Edit ({{ selectedExpenses.length }})
+              </v-btn>
+              <v-btn 
+                color="error" 
+                variant="outlined"
+                @click="deleteSelectedExpenses"
+                prepend-icon="mdi-trash-can"
+                size="small"
+              >
+                Delete
+              </v-btn>
+            </v-btn-group>
+          </div>
         </div>
 
         <!-- Debugging help (hidden) -->
@@ -45,10 +83,6 @@
           Selected: {{ selectedExpenses.length }} items
         </div>
 
-        <!-- Add Expense Form -->
-        <div v-if="showAddExpense">
-          <input-expenses @update-expenses="handleUpdateExpenses" />
-        </div>
 
         <!-- Loading Screen -->
         <div v-if="loading" class="text-center">
@@ -222,25 +256,73 @@
         </div>
       </div>
 
+      <!-- Add Expense Dialog -->
+      <v-dialog v-model="isAddDialogOpen" max-width="1000px">
+        <v-card>
+          <v-toolbar color="primary" density="comfortable">
+            <v-toolbar-title>Add New Expense</v-toolbar-title>
+            <v-spacer></v-spacer>
+            <v-btn icon @click="isAddDialogOpen = false">
+              <v-icon>mdi-close</v-icon>
+            </v-btn>
+          </v-toolbar>
+          <v-card-text class="pa-6">
+            <input-expenses @update-expenses="handleUpdateExpenses" />
+          </v-card-text>
+        </v-card>
+      </v-dialog>
+
       <!-- Edit Expense Dialog -->
-      <v-dialog v-model="isEditDialogOpen" max-width="1200px">
-        <template v-slot:default="dialog">
-          <v-card>
-            <v-toolbar color="primary" dark>
-              <v-toolbar-title>Edit Expense</v-toolbar-title>
-              <v-spacer></v-spacer>
-              <v-btn icon @click="isEditDialogOpen = false">
-                <v-icon>mdi-close</v-icon>
-              </v-btn>
-            </v-toolbar>
-            <v-card-text>
-              <input-expenses
-                :expenseData="selectedExpense"
-                @update-expenses="handleUpdateExpenses"
-              />
-            </v-card-text>
-          </v-card>
-        </template>
+      <v-dialog v-model="isEditDialogOpen" max-width="1000px">
+        <v-card>
+          <v-toolbar color="primary" density="comfortable">
+            <v-toolbar-title>Edit Expense</v-toolbar-title>
+            <v-spacer></v-spacer>
+            <v-btn icon @click="isEditDialogOpen = false">
+              <v-icon>mdi-close</v-icon>
+            </v-btn>
+          </v-toolbar>
+          <v-card-text class="pa-6">
+            <input-expenses
+              :expenseData="selectedExpense"
+              @update-expenses="handleUpdateExpenses"
+            />
+          </v-card-text>
+        </v-card>
+      </v-dialog>
+
+      <!-- Export Dialog -->
+      <v-dialog v-model="isExportDialogOpen" max-width="500px">
+        <v-card>
+          <v-card-title class="text-h5">Export Expenses to CSV</v-card-title>
+          <v-card-text>
+            <v-select
+              v-model="exportTimeframe"
+              :items="exportTimeframes"
+              item-title="label"
+              item-value="value"
+              label="Export timeframe"
+              variant="outlined"
+              class="mb-4"
+            ></v-select>
+            
+            <v-alert type="info" variant="tonal" class="mb-4">
+              This will export {{ getExportCount() }} expenses from the selected timeframe.
+            </v-alert>
+          </v-card-text>
+          <v-card-actions>
+            <v-spacer></v-spacer>
+            <v-btn color="grey" variant="text" @click="isExportDialogOpen = false">Cancel</v-btn>
+            <v-btn
+              color="primary"
+              @click="exportToCSV"
+              :loading="exportLoading"
+              prepend-icon="mdi-download"
+            >
+              Export CSV
+            </v-btn>
+          </v-card-actions>
+        </v-card>
       </v-dialog>
 
       <!-- Bulk Edit Dialog -->
@@ -349,13 +431,46 @@
 </template>
 
 <style scoped>
-/* Circular button styling */
-.circle-btn {
-  height: 64px;
-  border-radius: 50%;
+/* Toolbar Styling */
+.toolbar-container {
   display: flex;
   align-items: center;
-  justify-content: center;
+  gap: 16px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+
+.search-container {
+  flex: 1;
+  min-width: 300px;
+  max-width: 400px;
+}
+
+.search-field {
+  background-color: rgb(var(--v-theme-surface));
+}
+
+.action-buttons-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 768px) {
+  .toolbar-container {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+  
+  .search-container {
+    max-width: none;
+  }
+  
+  .action-buttons-container {
+    justify-content: center;
+  }
 }
 
 /* Table Cell Styling */
@@ -618,7 +733,23 @@ export default {
             isOpen: true
           };
         }
-        groupedExpenses[month].expenses.push(expense);
+        
+        // Add searchable fields to expense for native Vuetify search
+        const enhancedExpense = {
+          ...expense,
+          searchableText: [
+            expense.ExpenseCategory,
+            expense.PlaidMerchantName,
+            expense.PlaidName,
+            expense.AdditionalNotes,
+            expense.ScopeName,
+            expense.Amount?.toString(),
+            getBankName(expense.PlaidAccountID, plaidAccounts.value),
+            expense.PlaidAccountID ? 'auto' : 'manual'
+          ].filter(Boolean).join(' ').toLowerCase()
+        };
+        
+        groupedExpenses[month].expenses.push(enhancedExpense);
         const amount = parseFloat(expense.Amount?.toString().replace(/[^0-9.-]+/g, "") || 0);
         groupedExpenses[month].total += amount;
       });
@@ -847,13 +978,144 @@ export default {
     const handleUpdateExpenses = () => {
       fetchExpenses();
       isEditDialogOpen.value = false;
-      showAddExpense.value = false;
+      isAddDialogOpen.value = false;
     };
 
-    // Toggle add expense form
-    const showAddExpense = ref(false);
-    const toggleAddExpense = () => {
-      showAddExpense.value = !showAddExpense.value;
+    // Add expense dialog
+    const isAddDialogOpen = ref(false);
+    const openAddExpenseDialog = () => {
+      isAddDialogOpen.value = true;
+    };
+
+    // Export functionality
+    const isExportDialogOpen = ref(false);
+    const exportLoading = ref(false);
+    const exportTimeframe = ref('last3months');
+    
+    const exportTimeframes = ref([
+      { label: 'Last 30 days', value: 'last30days' },
+      { label: 'Last 3 months', value: 'last3months' },
+      { label: 'Last 6 months', value: 'last6months' },
+      { label: 'Last year', value: 'lastyear' },
+      { label: 'All time', value: 'alltime' }
+    ]);
+
+    const openExportDialog = () => {
+      isExportDialogOpen.value = true;
+    };
+
+    const getExportCount = () => {
+      const now = new Date();
+      let cutoffDate;
+      
+      switch (exportTimeframe.value) {
+        case 'last30days':
+          cutoffDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+          break;
+        case 'last3months':
+          cutoffDate = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+          break;
+        case 'last6months':
+          cutoffDate = new Date(now.getTime() - 180 * 24 * 60 * 60 * 1000);
+          break;
+        case 'lastyear':
+          cutoffDate = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
+          break;
+        case 'alltime':
+        default:
+          return expenses.value.length;
+      }
+      
+      return expenses.value.filter(expense => {
+        const expenseDate = new Date(expense.ExpenseDate);
+        return expenseDate >= cutoffDate;
+      }).length;
+    };
+
+    const exportToCSV = () => {
+      exportLoading.value = true;
+      
+      try {
+        // Filter expenses based on timeframe
+        let expensesToExport = [...expenses.value];
+        
+        if (exportTimeframe.value !== 'alltime') {
+          const now = new Date();
+          let cutoffDate;
+          
+          switch (exportTimeframe.value) {
+            case 'last30days':
+              cutoffDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+              break;
+            case 'last3months':
+              cutoffDate = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+              break;
+            case 'last6months':
+              cutoffDate = new Date(now.getTime() - 180 * 24 * 60 * 60 * 1000);
+              break;
+            case 'lastyear':
+              cutoffDate = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
+              break;
+          }
+          
+          expensesToExport = expenses.value.filter(expense => {
+            const expenseDate = new Date(expense.ExpenseDate);
+            return expenseDate >= cutoffDate;
+          });
+        }
+        
+        // Sort by date (newest first)
+        expensesToExport.sort((a, b) => new Date(b.ExpenseDate) - new Date(a.ExpenseDate));
+        
+        // Create CSV content
+        const headers = [
+          'Date',
+          'Amount',
+          'Category',
+          'Merchant',
+          'Notes',
+          'Scope',
+          'Source'
+        ];
+        
+        const csvContent = [
+          headers.join(','),
+          ...expensesToExport.map(expense => {
+            const date = formatDate(adjustForTimezone(expense.ExpenseDate));
+            const amount = expense.Amount?.toString().replace(/[^0-9.-]+/g, '') || '0';
+            const category = `"${expense.ExpenseCategory || ''}"`;
+            const merchant = `"${expense.PlaidMerchantName || expense.PlaidName || ''}"`;
+            const notes = `"${expense.AdditionalNotes || ''}"`;
+            const scope = `"${expense.ScopeName || ''}"`;
+            const source = expense.PlaidAccountID ? 
+              `"${getBankName(expense.PlaidAccountID, plaidAccounts.value)}"` : '"Manual"';
+            
+            return [date, amount, category, merchant, notes, scope, source].join(',');
+          })
+        ].join('\n');
+        
+        // Create and download file
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        link.setAttribute('href', url);
+        
+        const timeframeLabel = exportTimeframes.value.find(t => t.value === exportTimeframe.value)?.label || 'expenses';
+        const filename = `expenses-${timeframeLabel.toLowerCase().replace(/\s+/g, '-')}-${new Date().toISOString().split('T')[0]}.csv`;
+        link.setAttribute('download', filename);
+        
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        isExportDialogOpen.value = false;
+      } catch (error) {
+        console.error('Error exporting CSV:', error);
+        alert('Error exporting CSV file');
+      } finally {
+        exportLoading.value = false;
+      }
     };
 
     // Watch selection for debugging
@@ -865,6 +1127,7 @@ export default {
     watch(processedExpenses, () => {
       updateMonthGroups();
     });
+
 
     // Simple date formatting for table display
     const formatDateSimple = (date) => {
@@ -897,21 +1160,28 @@ export default {
       headers,
       selectedExpenses,
       monthGroups,
-      showAddExpense,
+      isAddDialogOpen,
       isEditDialogOpen,
       selectedExpense,
       isBulkEditDialogOpen,
       bulkEditLoading,
       bulkEdit,
+      isExportDialogOpen,
+      exportLoading,
+      exportTimeframe,
+      exportTimeframes,
 
       // Methods
-      toggleAddExpense,
+      openAddExpenseDialog,
       handleUpdateExpenses,
       editExpense,
       deleteExpense,
       deleteSelectedExpenses,
       openBulkEditDialog,
       applyBulkEdit,
+      openExportDialog,
+      exportToCSV,
+      getExportCount,
 
       // Computed
       isBulkEditValid,

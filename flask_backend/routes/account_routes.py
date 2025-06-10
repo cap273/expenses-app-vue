@@ -79,7 +79,7 @@ def create_account():
 
                 # Create personal scope for the new account
                 personal_scope = Scope(
-                    ScopeName=f"{username}'s Personal",
+                    ScopeName="Personal",
                     ScopeType='personal',
                     CreateDate=datetime.now().date(),
                     LastUpdated=datetime.now().date()

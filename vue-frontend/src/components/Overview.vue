@@ -193,7 +193,7 @@
                       <div class="d-flex align-center category-name-container">
                         <div class="category-bar" 
                           :style="{
-                            width: `${Math.max(10, (cat.amount / topSpentCategories[0].amount) * 60)}%`,
+                            width: `${getCategoryBarWidth(cat.amount, idx)}%`,
                             backgroundColor: getCategoryColor(idx)
                           }"
                         ></div>
@@ -624,6 +624,28 @@ export default {
       return colors[index % colors.length];
     };
 
+    // Calculate category bar width with true proportional scaling
+    const getCategoryBarWidth = (amount, index) => {
+      if (topSpentCategories.value.length === 0) return 5;
+      
+      const maxAmount = topSpentCategories.value[0].amount;
+      
+      // If all amounts are the same, use equal widths
+      if (maxAmount === 0) {
+        return 70;
+      }
+      
+      // True proportional scaling: each bar is exactly proportional to its value
+      // Scale the largest value to 75% to leave room for text, all others are proportional
+      const maxWidth = 75;
+      const proportionalWidth = (amount / maxAmount) * maxWidth;
+      
+      // Only apply a very small minimum (2%) for tiny values to remain visible
+      const minWidth = 2;
+      
+      return Math.max(minWidth, Math.round(proportionalWidth));
+    };
+
     // Get an array of colors for categories
     const getCategoryColors = (count) => {
       return Array.from({ length: count }, (_, i) => getCategoryColor(i));
@@ -826,6 +848,7 @@ export default {
       onAccountsFetched,
       adjustForTimezone,
       getCategoryColor,
+      getCategoryBarWidth,
       parseNumericValue,
     };
   },

@@ -83,12 +83,16 @@
     <div v-if="!props.expenses" class="no-data-message">
       <p>Loading expenses...</p>
     </div>
-    <div v-else-if="hasChartData" class="chart-wrapper">
-      <component
-        :is="currentChartComponent"
-        :data="chartData"
-        :options="chartOptions"
-      />
+    <div v-else-if="hasChartData" :class="['chart-wrapper', { 'sankey-chart': selectedChartType === 'sankey' }]">
+      <Transition name="chart-fade" mode="out-in">
+        <component
+          :key="selectedChartType"
+          :is="currentChartComponent"
+          :data="chartData"
+          :options="chartOptions"
+          :height="selectedChartType === 'sankey' ? 500 : undefined"
+        />
+      </Transition>
     </div>
     <div v-else class="no-data-message">
       <p>No expenses to display for the selected time period and filters.</p>
@@ -97,31 +101,15 @@
 </template>
 
 <script>
-import { ref, computed, defineComponent, h } from 'vue';
-import { Bar, Pie, Chart } from 'vue-chartjs';
+import { ref, computed } from 'vue';
+import { Bar, Pie } from 'vue-chartjs';
 import { Chart as ChartJS, registerables } from 'chart.js';
-import { SankeyController, Flow } from 'chartjs-chart-sankey';
 import { formatDate, parseDateInUTC} from '@/utils/dateUtils.js';
+import { getPlaidCategory } from '@/utils/dataUtilities.js';
 import { useTheme } from 'vuetify';
+import D3SankeyChart from './D3SankeyChart.vue';
 
 ChartJS.register(...registerables);
-ChartJS.register(SankeyController, Flow);
-
-const SankeyChart = defineComponent({
-  name: 'SankeyChart',
-  props: {
-    data: Object,
-    options: Object,
-  },
-  setup(props) {
-    return () =>
-      h(Chart, {
-        type: 'sankey',
-        data: props.data,
-        options: props.options,
-      });
-  },
-});
 
 // Add currency formatter
 const formatCurrency = (value) => {
@@ -140,7 +128,7 @@ export default {
   components: {
     BarChart: Bar,
     PieChart: Pie,
-    SankeyChart,
+    D3SankeyChart,
   },
   props: {
     expenses: {
@@ -192,7 +180,7 @@ export default {
       const typeMap = {
         bar: 'BarChart',
         pie: 'PieChart',
-        sankey: 'SankeyChart',
+        sankey: 'D3SankeyChart',
       };
       return typeMap[selectedChartType.value] || 'BarChart';
     });
@@ -245,31 +233,9 @@ export default {
       const textColor = isDark ? '#FFFFFF' : '#000000';
       const gridColor = isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
 
+      // Sankey charts are handled by D3SankeyChart component
       if (selectedChartType.value === 'sankey') {
-        return {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            tooltip: {
-              callbacks: {
-                label: function (context) {
-                  const label = context.raw.from + ' → ' + context.raw.to;
-                  const value = formatCurrency(context.raw.flow || 0);
-                  return `${label}: ${value}`;
-                },
-              },
-              titleColor: textColor,
-              bodyColor: textColor,
-              backgroundColor: isDark ? '#424242' : '#FFFFFF',
-              borderColor: gridColor,
-            },
-            legend: {
-              labels: {
-                color: textColor,
-              }
-            }
-          },
-        };
+        return {};
       }
 
       // Base options for all chart types
@@ -354,27 +320,31 @@ export default {
       if (!filteredExpenses.value) return null;
 
       if (selectedChartType.value === 'sankey') {
-        const sankeyData = [];
+        // Group expenses by category and calculate totals
+        const categoryTotals = {};
+        
         filteredExpenses.value.forEach((expense) => {
-          const source = `${expense.ScopeName} (${expense.ScopeType})`;
-          const target = expense.ExpenseCategory || getPlaidCategory(expense);
+          const category = expense.ExpenseCategory || getPlaidCategory(expense) || 'Uncategorized';
           const amount = parseFloat(expense.Amount?.toString().replace(/[^0-9.-]+/g, "") || 0);
           
+          categoryTotals[category] = (categoryTotals[category] || 0) + amount;
+        });
+
+        // Create Sankey flows from "Total Expenses" to each category
+        const sankeyData = [];
+        
+        Object.entries(categoryTotals).forEach(([category, amount]) => {
           sankeyData.push({
-            from: source,
-            to: target,
+            from: 'Total Expenses',
+            to: category,
             flow: amount,
           });
         });
 
         return {
           datasets: [{
-            label: 'Expense Flows',
-            data: sankeyData,
-            colorFrom: 'blue',
-            colorTo: 'green',
-            colorMode: 'gradient',
-          }],
+            data: sankeyData
+          }]
         };
       }
 
@@ -404,6 +374,7 @@ export default {
       );
     }
 
+
     return {
       props,
       selectedTimePeriod,
@@ -419,6 +390,7 @@ export default {
       hasChartData,
       chartOptions,
       chartData,
+      formatCurrency,
     };
   },
 };
@@ -446,8 +418,37 @@ export default {
   margin-top: 40px;
   background-color: var(--v-surface-variant-color);
   border-radius: 8px;
+  transition: height 0.5s ease-in-out;
 }
 
+.chart-wrapper.sankey-chart {
+  height: 700px;
+  min-height: 700px;
+}
+
+@media (max-width: 768px) {
+  .chart-wrapper.sankey-chart {
+    height: 600px;
+    min-height: 600px;
+  }
+}
+
+
+/* Transition Animations */
+.chart-fade-enter-active,
+.chart-fade-leave-active {
+  transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
+}
+
+.chart-fade-enter-from {
+  opacity: 0;
+  transform: scale(0.95);
+}
+
+.chart-fade-leave-to {
+  opacity: 0;
+  transform: scale(1.05);
+}
 
 .no-data-message {
   display: flex;

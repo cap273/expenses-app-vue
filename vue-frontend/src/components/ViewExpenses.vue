@@ -7,37 +7,75 @@
       </div>
 
       <div class="content-box">
-        <div class="search-add-container">
-          <v-btn
-            color="primary"
-            @click="toggleAddExpense"
-            class="mr-2 circle-btn"
-            width="0"
-          >
-            <v-icon :class="{'rotate-icon': showAddExpense}">
-              mdi-plus
-            </v-icon>
-          </v-btn>
-          <v-text-field
-            v-model="search"
-            label="Search"
-            class="search-bar"
-            outlined
-            dense
-            hide-details="auto"
-            style="margin-bottom:0; margin-left:20px"
-          ></v-text-field>
+        <div class="toolbar-container">
+          <!-- Left side - Action Buttons (matching chart style) -->
+          <div class="left-actions">
+            <!-- Add Expense Button -->
+            <v-tooltip text="Add New Expense" location="top">
+              <template v-slot:activator="{ props }">
+                <v-btn
+                  v-bind="props"
+                  icon
+                  @click="openAddExpenseDialog"
+                  class="mr-2"
+                >
+                  <v-icon>mdi-plus</v-icon>
+                </v-btn>
+              </template>
+            </v-tooltip>
 
-          <!-- Action Buttons -->
-          <v-btn-group v-if="selectedExpenses.length > 0" style="margin-left:20px;">
-            <v-btn color="warning" @click="openBulkEditDialog" >
-              <v-icon left>mdi-pencil</v-icon>
-              ({{ selectedExpenses.length }})
-            </v-btn>
-            <v-btn color="error" @click="deleteSelectedExpenses">
-              <v-icon left>mdi-trash-can</v-icon>
-            </v-btn>
-          </v-btn-group>
+            <!-- Export Button -->
+            <v-tooltip text="Export to CSV" location="top">
+              <template v-slot:activator="{ props }">
+                <v-btn
+                  v-bind="props"
+                  icon
+                  @click="openExportDialog"
+                  class="mr-2"
+                >
+                  <v-icon>mdi-download</v-icon>
+                </v-btn>
+              </template>
+            </v-tooltip>
+          </div>
+
+          <!-- Center - Search Bar -->
+          <div class="search-container">
+            <v-text-field
+              v-model="search"
+              placeholder="Search expenses..."
+              variant="outlined"
+              density="comfortable"
+              prepend-inner-icon="mdi-magnify"
+              clearable
+              hide-details
+              class="search-field"
+            ></v-text-field>
+          </div>
+
+          <!-- Right side - Selected Actions -->
+          <div class="right-actions">
+            <v-btn-group v-if="selectedExpenses.length > 0">
+              <v-btn 
+                color="warning" 
+                variant="outlined"
+                @click="openBulkEditDialog"
+                prepend-icon="mdi-pencil"
+                size="small"
+              >
+                Edit ({{ selectedExpenses.length }})
+              </v-btn>
+              <v-btn 
+                color="error" 
+                variant="outlined"
+                @click="deleteSelectedExpenses"
+                prepend-icon="mdi-trash-can"
+                size="small"
+              >
+                Delete
+              </v-btn>
+            </v-btn-group>
+          </div>
         </div>
 
         <!-- Debugging help (hidden) -->
@@ -45,10 +83,6 @@
           Selected: {{ selectedExpenses.length }} items
         </div>
 
-        <!-- Add Expense Form -->
-        <div v-if="showAddExpense">
-          <input-expenses @update-expenses="handleUpdateExpenses" />
-        </div>
 
         <!-- Loading Screen -->
         <div v-if="loading" class="text-center">
@@ -85,100 +119,136 @@
             >
 <!-- Source Field (Bank Account) -->
             <template #item.Source="{ item }">
-              <div v-if="item.PlaidAccountID" class="account-info">
-                <v-icon small color="primary" class="mr-1">mdi-bank</v-icon>
-                <v-tooltip location="top">
+              <div class="source-cell">
+                <v-tooltip v-if="item.PlaidAccountID" location="top">
                   <template v-slot:activator="{ props }">
-                    <span v-bind="props" class="bank-name">
+                    <v-chip
+                      v-bind="props"
+                      size="small"
+                      color="primary"
+                      variant="tonal"
+                      prepend-icon="mdi-bank"
+                      class="source-chip"
+                    >
                       {{ getBankName(item.PlaidAccountID, plaidAccounts) }}
-                    </span>
+                    </v-chip>
                   </template>
                   <span>{{ getBankAccountDetails(item.PlaidAccountID, plaidAccounts) }}</span>
                 </v-tooltip>
-              </div>
-              <div v-else class="account-info">
-                <v-icon small color="grey">mdi-pencil-box-outline</v-icon>
-                <span class="account-manual">Manual</span>
+                <v-chip
+                  v-else
+                  size="small"
+                  color="grey"
+                  variant="tonal"
+                  prepend-icon="mdi-pencil"
+                  class="source-chip"
+                >
+                  Manual
+                </v-chip>
               </div>
             </template>
             <template #item.Merchant="{ item }">
-              <span v-if="item.PlaidMerchantName || item.PlaidName">
-                {{ item.PlaidMerchantName || item.PlaidName }}
-              </span>
-              <span v-else class="text-disabled">
-                Not available
-              </span>
+              <div class="merchant-cell">
+                <span v-if="item.PlaidMerchantName || item.PlaidName" class="merchant-name">
+                  {{ item.PlaidMerchantName || item.PlaidName }}
+                </span>
+                <span v-else class="merchant-placeholder">
+                  —
+                </span>
+              </div>
             </template>
               <!-- Scope Name Column -->
               <template #item.ScopeName="{ item }">
-                {{ item.ScopeName }}
-                <v-chip
-                  size="x-small"
-                  :color="item.ScopeType === 'personal' ? 'blue' : 'purple'"
-                  class="ml-1"
-                  variant="flat"
-                >
-                  {{ item.ScopeType.charAt(0).toUpperCase() }}
-                </v-chip>
+                <div class="scope-cell">
+                  <v-chip
+                    size="small"
+                    :color="item.ScopeType === 'personal' ? 'blue' : 'purple'"
+                    variant="tonal"
+                    :prepend-icon="item.ScopeType === 'personal' ? 'mdi-account' : 'mdi-home'"
+                  >
+                    {{ item.ScopeName }}
+                  </v-chip>
+                </div>
               </template>
 
               <!-- Expense Date Column -->
               <template #item.ExpenseDate="{ item }">
-                {{ formatDate(adjustForTimezone(item.ExpenseDate)) }}
+                <div class="date-cell">
+                  {{ formatDateSimple(adjustForTimezone(item.ExpenseDate)) }}
+                </div>
               </template>
 
               <!-- Category Column with Icons for Plaid Transactions -->
               <template #item.ExpenseCategory="{ item }">
                 <div class="category-cell">
-                  <span>{{ item.ExpenseCategory || getPlaidCategory(item) }}</span>
-                  <v-tooltip v-if="item.PlaidPersonalFinanceCategoryPrimary" location="top">
+                  <span class="category-text">{{ item.ExpenseCategory || getPlaidCategory(item) }}</span>
+                  <v-tooltip v-if="item.PlaidPersonalFinanceCategoryPrimary && !item.CategoryConfirmed" location="top">
                     <template v-slot:activator="{ props }">
                       <v-icon
                         v-bind="props"
-                        size="small"
-                        color="green"
-                        class="ml-2"
+                        size="16"
+                        color="success"
+                        class="ml-1 category-icon"
                       >
-                        mdi-robot
+                        mdi-robot-outline
                       </v-icon>
                     </template>
                     <span>Auto-categorized by Plaid</span>
-                    </v-tooltip>
-                    <v-tooltip v-else-if="item.PlaidTransactionID && item.CategoryConfirmed" location="top">
-                      <template v-slot:activator="{ props }">
-                        <v-icon
-                          v-bind="props"
-                          size="small"
-                          color="blue"
-                          class="ml-2"
-                        >
-                          mdi-check-circle
-                        </v-icon>
-                      </template>
-                      <span>Category confirmed by you</span>
-                    </v-tooltip>
+                  </v-tooltip>
+                  <v-tooltip v-else-if="item.PlaidTransactionID && item.CategoryConfirmed" location="top">
+                    <template v-slot:activator="{ props }">
+                      <v-icon
+                        v-bind="props"
+                        size="16"
+                        color="primary"
+                        class="ml-1 category-icon"
+                      >
+                        mdi-check-circle-outline
+                      </v-icon>
+                    </template>
+                    <span>Category confirmed by you</span>
+                  </v-tooltip>
+                </div>
+              </template>
+
+              <!-- Notes Column -->
+              <template #item.AdditionalNotes="{ item }">
+                <div class="notes-cell">
+                  <span v-if="item.AdditionalNotes" class="notes-text">
+                    {{ item.AdditionalNotes }}
+                  </span>
+                  <span v-else class="notes-placeholder">—</span>
                 </div>
               </template>
 
               <!-- Actions Column -->
               <template #item.actions="{ item }">
                 <div class="action-buttons">
-                  <v-btn
-                    icon="mdi-pencil"
-                    size="small"
-                    variant="text"
-                    color="grey-darken-1"
-                    class="action-button"
-                    @click="editExpense(item)"
-                  ></v-btn>
-                  <v-btn
-                    icon="mdi-delete"
-                    size="small"
-                    variant="text"
-                    color="grey-darken-1"
-                    class="action-button"
-                    @click="deleteExpense(item.ExpenseID)"
-                  ></v-btn>
+                  <v-menu>
+                    <template v-slot:activator="{ props }">
+                      <v-btn
+                        v-bind="props"
+                        icon="mdi-dots-vertical"
+                        size="small"
+                        variant="text"
+                        density="comfortable"
+                      ></v-btn>
+                    </template>
+                    <v-list density="compact">
+                      <v-list-item @click="editExpense(item)">
+                        <template v-slot:prepend>
+                          <v-icon size="small">mdi-pencil</v-icon>
+                        </template>
+                        <v-list-item-title>Edit</v-list-item-title>
+                      </v-list-item>
+                      <v-list-item @click="deleteExpense(item.ExpenseID)" class="text-error">
+                        <template v-slot:prepend>
+                          <v-icon size="small" color="error">mdi-delete</v-icon>
+                        </template>
+                        <v-list-item-title>Delete</v-list-item-title>
+                      </v-list-item>
+                    </v-list>
+                  </v-menu>
                 </div>
               </template>
             </v-data-table>
@@ -186,25 +256,73 @@
         </div>
       </div>
 
+      <!-- Add Expense Dialog -->
+      <v-dialog v-model="isAddDialogOpen" max-width="1000px">
+        <v-card>
+          <v-toolbar color="primary" density="comfortable">
+            <v-toolbar-title>Add New Expense</v-toolbar-title>
+            <v-spacer></v-spacer>
+            <v-btn icon @click="isAddDialogOpen = false">
+              <v-icon>mdi-close</v-icon>
+            </v-btn>
+          </v-toolbar>
+          <v-card-text class="pa-6">
+            <input-expenses @update-expenses="handleUpdateExpenses" />
+          </v-card-text>
+        </v-card>
+      </v-dialog>
+
       <!-- Edit Expense Dialog -->
-      <v-dialog v-model="isEditDialogOpen" max-width="1200px">
-        <template v-slot:default="dialog">
-          <v-card>
-            <v-toolbar color="primary" dark>
-              <v-toolbar-title>Edit Expense</v-toolbar-title>
-              <v-spacer></v-spacer>
-              <v-btn icon @click="isEditDialogOpen = false">
-                <v-icon>mdi-close</v-icon>
-              </v-btn>
-            </v-toolbar>
-            <v-card-text>
-              <input-expenses
-                :expenseData="selectedExpense"
-                @update-expenses="handleUpdateExpenses"
-              />
-            </v-card-text>
-          </v-card>
-        </template>
+      <v-dialog v-model="isEditDialogOpen" max-width="1000px">
+        <v-card>
+          <v-toolbar color="primary" density="comfortable">
+            <v-toolbar-title>Edit Expense</v-toolbar-title>
+            <v-spacer></v-spacer>
+            <v-btn icon @click="isEditDialogOpen = false">
+              <v-icon>mdi-close</v-icon>
+            </v-btn>
+          </v-toolbar>
+          <v-card-text class="pa-6">
+            <input-expenses
+              :expenseData="selectedExpense"
+              @update-expenses="handleUpdateExpenses"
+            />
+          </v-card-text>
+        </v-card>
+      </v-dialog>
+
+      <!-- Export Dialog -->
+      <v-dialog v-model="isExportDialogOpen" max-width="500px">
+        <v-card>
+          <v-card-title class="text-h5">Export Expenses to CSV</v-card-title>
+          <v-card-text>
+            <v-select
+              v-model="exportTimeframe"
+              :items="exportTimeframes"
+              item-title="label"
+              item-value="value"
+              label="Export timeframe"
+              variant="outlined"
+              class="mb-4"
+            ></v-select>
+            
+            <v-alert type="info" variant="tonal" class="mb-4">
+              This will export {{ getExportCount() }} expenses from the selected timeframe.
+            </v-alert>
+          </v-card-text>
+          <v-card-actions>
+            <v-spacer></v-spacer>
+            <v-btn color="grey" variant="text" @click="isExportDialogOpen = false">Cancel</v-btn>
+            <v-btn
+              color="primary"
+              @click="exportToCSV"
+              :loading="exportLoading"
+              prepend-icon="mdi-download"
+            >
+              Export CSV
+            </v-btn>
+          </v-card-actions>
+        </v-card>
       </v-dialog>
 
       <!-- Bulk Edit Dialog -->
@@ -313,14 +431,166 @@
 </template>
 
 <style scoped>
-  /* Circular button styling */
-  .circle-btn {
-    height: 64px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
+/* Toolbar Styling */
+.toolbar-container {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+
+.search-container {
+  flex: 1;
+  min-width: 300px;
+  max-width: 400px;
+}
+
+.search-field {
+  background-color: rgb(var(--v-theme-surface));
+}
+
+.action-buttons-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 768px) {
+  .toolbar-container {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+  
+  .search-container {
+    max-width: none;
+  }
+  
+  .action-buttons-container {
     justify-content: center;
   }
+}
+
+/* Table Cell Styling */
+.source-cell {
+  display: flex;
+  align-items: center;
+  max-width: 140px;
+}
+
+.source-chip {
+  max-width: 100%;
+}
+
+.source-chip :deep(.v-chip__content) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.merchant-cell {
+  max-width: 180px;
+}
+
+.merchant-name {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 500;
+}
+
+.merchant-placeholder {
+  color: rgb(var(--v-theme-on-surface));
+  opacity: 0.6;
+  font-style: italic;
+}
+
+.date-cell {
+  font-variant-numeric: tabular-nums;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.scope-cell {
+  display: flex;
+  align-items: center;
+}
+
+.category-cell {
+  display: flex;
+  align-items: center;
+  max-width: 200px;
+}
+
+.category-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+
+.category-icon {
+  opacity: 0.7;
+  flex-shrink: 0;
+}
+
+.notes-cell {
+  max-width: 150px;
+}
+
+.notes-text {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.875rem;
+}
+
+.notes-placeholder {
+  color: rgb(var(--v-theme-on-surface));
+  opacity: 0.6;
+  font-style: italic;
+}
+
+.action-buttons {
+  display: flex;
+  justify-content: center;
+}
+
+/* Table styling improvements */
+:deep(.v-data-table) {
+  border-radius: 8px;
+}
+
+:deep(.v-data-table-header) {
+  background-color: rgb(var(--v-theme-surface-variant));
+}
+
+:deep(.v-data-table__td) {
+  padding: 8px 16px !important;
+  border-bottom: 1px solid rgba(var(--v-theme-outline), 0.12) !important;
+}
+
+:deep(.v-data-table__th) {
+  padding: 12px 16px !important;
+  font-weight: 600 !important;
+  font-size: 0.875rem !important;
+  color: rgb(var(--v-theme-on-surface)) !important;
+  opacity: 0.8 !important;
+}
+
+:deep(.v-data-table__tr:hover) {
+  background-color: rgba(var(--v-theme-primary), 0.04) !important;
+}
+
+/* Amount column styling */
+:deep(.v-data-table__td[data-column="Amount"]) {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
 </style>
 
 <script>
@@ -342,14 +612,14 @@ export default {
     const search = ref("");
     const expenses = ref([]);
     const headers = ref([
-      { title: 'Source', value: 'Source', sortable: true },
-      { title: 'Merchant/Vendor', value: 'Merchant', sortable: true }, // Add this new column
-      { title: 'Scope', value: 'ScopeName', sortable: true },
-      { title: 'Date', value: 'ExpenseDate', sortable: true },
-      { title: 'Amount', value: 'Amount' },
-      { title: 'Category', value: 'ExpenseCategory', sortable: true },
-      { title: 'Notes', value: 'AdditionalNotes', sortable: true },
-      { title: 'Actions', value: 'actions', sortable: false, width: '120px', align: 'center'},
+      { title: 'Source', value: 'Source', sortable: false, width: '140px' },
+      { title: 'Date', value: 'ExpenseDate', sortable: true, width: '100px' },
+      { title: 'Merchant', value: 'Merchant', sortable: true, width: '180px' },
+      { title: 'Amount', value: 'Amount', sortable: true, width: '120px', align: 'end' },
+      { title: 'Category', value: 'ExpenseCategory', sortable: true, width: '200px' },
+      { title: 'Scope', value: 'ScopeName', sortable: true, width: '120px' },
+      { title: 'Notes', value: 'AdditionalNotes', sortable: false, width: '150px' },
+      { title: '', value: 'actions', sortable: false, width: '80px', align: 'center'},
     ]);
 
     // The array to hold selected rows
@@ -463,7 +733,23 @@ export default {
             isOpen: true
           };
         }
-        groupedExpenses[month].expenses.push(expense);
+        
+        // Add searchable fields to expense for native Vuetify search
+        const enhancedExpense = {
+          ...expense,
+          searchableText: [
+            expense.ExpenseCategory,
+            expense.PlaidMerchantName,
+            expense.PlaidName,
+            expense.AdditionalNotes,
+            expense.ScopeName,
+            expense.Amount?.toString(),
+            getBankName(expense.PlaidAccountID, plaidAccounts.value),
+            expense.PlaidAccountID ? 'auto' : 'manual'
+          ].filter(Boolean).join(' ').toLowerCase()
+        };
+        
+        groupedExpenses[month].expenses.push(enhancedExpense);
         const amount = parseFloat(expense.Amount?.toString().replace(/[^0-9.-]+/g, "") || 0);
         groupedExpenses[month].total += amount;
       });
@@ -692,13 +978,144 @@ export default {
     const handleUpdateExpenses = () => {
       fetchExpenses();
       isEditDialogOpen.value = false;
-      showAddExpense.value = false;
+      isAddDialogOpen.value = false;
     };
 
-    // Toggle add expense form
-    const showAddExpense = ref(false);
-    const toggleAddExpense = () => {
-      showAddExpense.value = !showAddExpense.value;
+    // Add expense dialog
+    const isAddDialogOpen = ref(false);
+    const openAddExpenseDialog = () => {
+      isAddDialogOpen.value = true;
+    };
+
+    // Export functionality
+    const isExportDialogOpen = ref(false);
+    const exportLoading = ref(false);
+    const exportTimeframe = ref('last3months');
+    
+    const exportTimeframes = ref([
+      { label: 'Last 30 days', value: 'last30days' },
+      { label: 'Last 3 months', value: 'last3months' },
+      { label: 'Last 6 months', value: 'last6months' },
+      { label: 'Last year', value: 'lastyear' },
+      { label: 'All time', value: 'alltime' }
+    ]);
+
+    const openExportDialog = () => {
+      isExportDialogOpen.value = true;
+    };
+
+    const getExportCount = () => {
+      const now = new Date();
+      let cutoffDate;
+      
+      switch (exportTimeframe.value) {
+        case 'last30days':
+          cutoffDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+          break;
+        case 'last3months':
+          cutoffDate = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+          break;
+        case 'last6months':
+          cutoffDate = new Date(now.getTime() - 180 * 24 * 60 * 60 * 1000);
+          break;
+        case 'lastyear':
+          cutoffDate = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
+          break;
+        case 'alltime':
+        default:
+          return expenses.value.length;
+      }
+      
+      return expenses.value.filter(expense => {
+        const expenseDate = new Date(expense.ExpenseDate);
+        return expenseDate >= cutoffDate;
+      }).length;
+    };
+
+    const exportToCSV = () => {
+      exportLoading.value = true;
+      
+      try {
+        // Filter expenses based on timeframe
+        let expensesToExport = [...expenses.value];
+        
+        if (exportTimeframe.value !== 'alltime') {
+          const now = new Date();
+          let cutoffDate;
+          
+          switch (exportTimeframe.value) {
+            case 'last30days':
+              cutoffDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+              break;
+            case 'last3months':
+              cutoffDate = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+              break;
+            case 'last6months':
+              cutoffDate = new Date(now.getTime() - 180 * 24 * 60 * 60 * 1000);
+              break;
+            case 'lastyear':
+              cutoffDate = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
+              break;
+          }
+          
+          expensesToExport = expenses.value.filter(expense => {
+            const expenseDate = new Date(expense.ExpenseDate);
+            return expenseDate >= cutoffDate;
+          });
+        }
+        
+        // Sort by date (newest first)
+        expensesToExport.sort((a, b) => new Date(b.ExpenseDate) - new Date(a.ExpenseDate));
+        
+        // Create CSV content
+        const headers = [
+          'Date',
+          'Amount',
+          'Category',
+          'Merchant',
+          'Notes',
+          'Scope',
+          'Source'
+        ];
+        
+        const csvContent = [
+          headers.join(','),
+          ...expensesToExport.map(expense => {
+            const date = formatDate(adjustForTimezone(expense.ExpenseDate));
+            const amount = expense.Amount?.toString().replace(/[^0-9.-]+/g, '') || '0';
+            const category = `"${expense.ExpenseCategory || ''}"`;
+            const merchant = `"${expense.PlaidMerchantName || expense.PlaidName || ''}"`;
+            const notes = `"${expense.AdditionalNotes || ''}"`;
+            const scope = `"${expense.ScopeName || ''}"`;
+            const source = expense.PlaidAccountID ? 
+              `"${getBankName(expense.PlaidAccountID, plaidAccounts.value)}"` : '"Manual"';
+            
+            return [date, amount, category, merchant, notes, scope, source].join(',');
+          })
+        ].join('\n');
+        
+        // Create and download file
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        link.setAttribute('href', url);
+        
+        const timeframeLabel = exportTimeframes.value.find(t => t.value === exportTimeframe.value)?.label || 'expenses';
+        const filename = `expenses-${timeframeLabel.toLowerCase().replace(/\s+/g, '-')}-${new Date().toISOString().split('T')[0]}.csv`;
+        link.setAttribute('download', filename);
+        
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        isExportDialogOpen.value = false;
+      } catch (error) {
+        console.error('Error exporting CSV:', error);
+        alert('Error exporting CSV file');
+      } finally {
+        exportLoading.value = false;
+      }
     };
 
     // Watch selection for debugging
@@ -710,6 +1127,21 @@ export default {
     watch(processedExpenses, () => {
       updateMonthGroups();
     });
+
+
+    // Simple date formatting for table display
+    const formatDateSimple = (date) => {
+      if (!date) return '—';
+      try {
+        const d = new Date(date);
+        return d.toLocaleDateString('en-US', {
+          month: 'short',
+          day: 'numeric'
+        });
+      } catch (e) {
+        return '—';
+      }
+    };
 
     onMounted(async () => {
       await Promise.all([
@@ -728,21 +1160,28 @@ export default {
       headers,
       selectedExpenses,
       monthGroups,
-      showAddExpense,
+      isAddDialogOpen,
       isEditDialogOpen,
       selectedExpense,
       isBulkEditDialogOpen,
       bulkEditLoading,
       bulkEdit,
+      isExportDialogOpen,
+      exportLoading,
+      exportTimeframe,
+      exportTimeframes,
 
       // Methods
-      toggleAddExpense,
+      openAddExpenseDialog,
       handleUpdateExpenses,
       editExpense,
       deleteExpense,
       deleteSelectedExpenses,
       openBulkEditDialog,
       applyBulkEdit,
+      openExportDialog,
+      exportToCSV,
+      getExportCount,
 
       // Computed
       isBulkEditValid,
@@ -756,6 +1195,7 @@ export default {
       getBankAccountDetails,
       getPlaidCategory,
       formatDate,
+      formatDateSimple,
 
       // Data
       categories,

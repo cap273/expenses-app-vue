@@ -9,6 +9,45 @@
 
     <!-- Settings and Filter Icons -->
     <div class="chart-controls">
+      <!-- View Mode Menu -->
+      <v-menu
+        offset-y
+        v-model="isViewModeMenuOpen"
+        location="bottom end"
+        class="mr-2"
+      >
+        <template v-slot:activator="{ props }">
+          <v-btn
+            icon
+            v-bind="props"
+            class="mr-2"
+          >
+            <v-icon>mdi-eye</v-icon>
+          </v-btn>
+        </template>
+        <v-list>
+          <v-list-subheader>View By</v-list-subheader>
+          <v-list-item
+            @click="changeViewMode('category')"
+            :class="{ 'v-list-item--active': viewMode === 'category' }"
+          >
+            <template v-slot:prepend>
+              <v-icon>mdi-tag</v-icon>
+            </template>
+            <v-list-item-title>Category</v-list-item-title>
+          </v-list-item>
+          <v-list-item
+            @click="changeViewMode('merchant')"
+            :class="{ 'v-list-item--active': viewMode === 'merchant' }"
+          >
+            <template v-slot:prepend>
+              <v-icon>mdi-store</v-icon>
+            </template>
+            <v-list-item-title>Merchant</v-list-item-title>
+          </v-list-item>
+        </v-list>
+      </v-menu>
+
       <!-- Filter Menu -->
       <v-menu
         offset-y
@@ -149,6 +188,8 @@ export default {
     ]);
     const selectedChartType = ref('bar');
     const selectedScopes = ref([]);
+    const viewMode = ref('category');
+    const isViewModeMenuOpen = ref(false);
 
     const availableScopes = computed(() => {
       if (!props.expenses) return [];
@@ -174,6 +215,11 @@ export default {
     const changeChartType = (type) => {
       selectedChartType.value = type;
       isChartMenuOpen.value = false;
+    };
+
+    const changeViewMode = (mode) => {
+      viewMode.value = mode;
+      isViewModeMenuOpen.value = false;
     };
 
     const currentChartComponent = computed(() => {
@@ -301,10 +347,11 @@ export default {
             ticks: {
               color: textColor,
               callback: function(value) {
-                // Truncate long category names
+                // Truncate long category/merchant names
                 const label = this.getLabelForValue(value);
-                if (label.length > 20) {
-                  return label.substr(0, 17) + '...';
+                const maxLength = viewMode.value === 'merchant' ? 25 : 20;
+                if (label.length > maxLength) {
+                  return label.substr(0, maxLength - 3) + '...';
                 }
                 return label;
               }
@@ -319,24 +366,31 @@ export default {
     const chartData = computed(() => {
       if (!filteredExpenses.value) return null;
 
+      const isViewByMerchant = viewMode.value === 'merchant';
+
       if (selectedChartType.value === 'sankey') {
-        // Group expenses by category and calculate totals
-        const categoryTotals = {};
+        // Group expenses by category or merchant and calculate totals
+        const totals = {};
         
         filteredExpenses.value.forEach((expense) => {
-          const category = expense.ExpenseCategory || getPlaidCategory(expense) || 'Uncategorized';
+          let groupKey;
+          if (isViewByMerchant) {
+            groupKey = expense.PlaidMerchantName || expense.PlaidName || expense.Merchant || 'Unknown Merchant';
+          } else {
+            groupKey = expense.ExpenseCategory || getPlaidCategory(expense) || 'Uncategorized';
+          }
           const amount = parseFloat(expense.Amount?.toString().replace(/[^0-9.-]+/g, "") || 0);
           
-          categoryTotals[category] = (categoryTotals[category] || 0) + amount;
+          totals[groupKey] = (totals[groupKey] || 0) + amount;
         });
 
-        // Create Sankey flows from "Total Expenses" to each category
+        // Create Sankey flows from "Total Expenses" to each group
         const sankeyData = [];
         
-        Object.entries(categoryTotals).forEach(([category, amount]) => {
+        Object.entries(totals).forEach(([group, amount]) => {
           sankeyData.push({
             from: 'Total Expenses',
-            to: category,
+            to: group,
             flow: amount,
           });
         });
@@ -348,20 +402,25 @@ export default {
         };
       }
 
-      const categoryTotals = {};
+      const totals = {};
       filteredExpenses.value.forEach((expense) => {
-        const category = expense.ExpenseCategory || 'Uncategorized';
+        let groupKey;
+        if (isViewByMerchant) {
+          groupKey = expense.PlaidMerchantName || expense.PlaidName || expense.Merchant || 'Unknown Merchant';
+        } else {
+          groupKey = expense.ExpenseCategory || 'Uncategorized';
+        }
         const amount = parseFloat(expense.Amount?.toString().replace(/[^0-9.-]+/g, "") || 0);
-        categoryTotals[category] = (categoryTotals[category] || 0) + amount;
+        totals[groupKey] = (totals[groupKey] || 0) + amount;
       });
 
-      const labels = Object.keys(categoryTotals);
-      const data = Object.values(categoryTotals);
+      const labels = Object.keys(totals);
+      const data = Object.values(totals);
 
       return {
         labels: labels.length > 0 ? labels : ['No Data'],
         datasets: [{
-          label: 'Total Expenses',
+          label: isViewByMerchant ? 'Total Expenses by Merchant' : 'Total Expenses by Category',
           data: data.length > 0 ? data : [0],
           backgroundColor: labels.length > 0 ? generateColors(labels.length) : ['#CCCCCC'],
         }],
@@ -384,6 +443,9 @@ export default {
       selectedChartType,
       selectedScopes,
       availableScopes,
+      viewMode,
+      isViewModeMenuOpen,
+      changeViewMode,
       clearFilters,
       changeChartType,
       currentChartComponent,

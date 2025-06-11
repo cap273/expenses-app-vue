@@ -106,6 +106,7 @@
               :headers="headers"
               :items="group.expenses"
               :search="search"
+              :custom-filter="customSearchFilter"
               :single-select="false" 
               item-key="ExpenseID"
               return-object
@@ -149,8 +150,8 @@
             </template>
             <template #item.Merchant="{ item }">
               <div class="merchant-cell">
-                <span v-if="item.PlaidMerchantName || item.PlaidName" class="merchant-name">
-                  {{ item.PlaidMerchantName || item.PlaidName }}
+                <span v-if="item.PlaidMerchantName || item.PlaidName || item.Merchant" class="merchant-name">
+                  {{ item.PlaidMerchantName || item.PlaidName || item.Merchant }}
                 </span>
                 <span v-else class="merchant-placeholder">
                   —
@@ -734,22 +735,7 @@ export default {
           };
         }
         
-        // Add searchable fields to expense for native Vuetify search
-        const enhancedExpense = {
-          ...expense,
-          searchableText: [
-            expense.ExpenseCategory,
-            expense.PlaidMerchantName,
-            expense.PlaidName,
-            expense.AdditionalNotes,
-            expense.ScopeName,
-            expense.Amount?.toString(),
-            getBankName(expense.PlaidAccountID, plaidAccounts.value),
-            expense.PlaidAccountID ? 'auto' : 'manual'
-          ].filter(Boolean).join(' ').toLowerCase()
-        };
-        
-        groupedExpenses[month].expenses.push(enhancedExpense);
+        groupedExpenses[month].expenses.push(expense);
         const amount = parseFloat(expense.Amount?.toString().replace(/[^0-9.-]+/g, "") || 0);
         groupedExpenses[month].total += amount;
       });
@@ -771,6 +757,30 @@ export default {
     // Toggle month group
     const toggleMonthGroup = (index) => {
       monthGroups.value[index].isOpen = !monthGroups.value[index].isOpen;
+    };
+
+    // Custom search filter
+    const customSearchFilter = (value, query, item) => {
+      if (!query) return true;
+      
+      const searchQuery = query.toLowerCase();
+      const actualItem = item?.raw || item;
+      
+      const searchFields = [
+        actualItem?.ExpenseCategory,
+        actualItem?.PlaidMerchantName,
+        actualItem?.PlaidName,
+        actualItem?.Merchant,
+        actualItem?.AdditionalNotes,
+        actualItem?.ScopeName,
+        actualItem?.Amount?.toString(),
+        getBankName(actualItem?.PlaidAccountID, plaidAccounts.value),
+        actualItem?.PlaidAccountID ? 'bank' : 'manual'
+      ];
+      
+      return searchFields.some(field => 
+        field && field.toString().toLowerCase().includes(searchQuery)
+      );
     };
 
     // API fetches
@@ -1084,7 +1094,7 @@ export default {
             const date = formatDate(adjustForTimezone(expense.ExpenseDate));
             const amount = expense.Amount?.toString().replace(/[^0-9.-]+/g, '') || '0';
             const category = `"${expense.ExpenseCategory || ''}"`;
-            const merchant = `"${expense.PlaidMerchantName || expense.PlaidName || ''}"`;
+            const merchant = `"${expense.PlaidMerchantName || expense.PlaidName || expense.Merchant || ''}"`;
             const notes = `"${expense.AdditionalNotes || ''}"`;
             const scope = `"${expense.ScopeName || ''}"`;
             const source = expense.PlaidAccountID ? 
@@ -1189,6 +1199,7 @@ export default {
 
       // Utils
       toggleMonthGroup,
+      customSearchFilter,
       formatCurrency,
       adjustForTimezone,
       getBankName,

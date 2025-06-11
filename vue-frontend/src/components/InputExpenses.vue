@@ -408,8 +408,12 @@ export default {
                         year: newVal.Year || '',
                         amount: newVal.Amount ? newVal.Amount.replace(/[^0-9.]/g, '') : '',
                         category: newVal.ExpenseCategory || '',
-                        merchant: newVal.PlaidMerchantName || newVal.PlaidName || '',
-                        notes: newVal.AdditionalNotes || '',
+                        merchant: newVal.PlaidMerchantName || newVal.PlaidName || 
+                                 (newVal.AdditionalNotes && newVal.AdditionalNotes.startsWith('Merchant: ') ? 
+                                  newVal.AdditionalNotes.split('\n')[0].replace('Merchant: ', '') : ''),
+                        notes: newVal.AdditionalNotes && newVal.AdditionalNotes.startsWith('Merchant: ') ? 
+                               newVal.AdditionalNotes.split('\n').slice(1).join('\n') : 
+                               (newVal.AdditionalNotes || ''),
                         ExpenseID: newVal.ExpenseID,
                         showDatePicker: false
                     }];

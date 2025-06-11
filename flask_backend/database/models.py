@@ -37,6 +37,7 @@ class Expense(db.Model):
     Currency = db.Column(db.String(50))
     SuggestedCategory = db.Column(db.String(255))
     CategoryConfirmed = db.Column(db.Boolean)
+    IsIncome = db.Column(db.Boolean, default=False)
 
 
 class Account(UserMixin, db.Model):

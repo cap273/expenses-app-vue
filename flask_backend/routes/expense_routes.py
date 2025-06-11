@@ -9,7 +9,7 @@ from werkzeug.exceptions import BadRequestKeyError
 
 from flask_backend.utils.db_tools import get_categories
 from flask_backend.utils.session import login_required_api
-from flask_backend.utils.category_mapping import get_category_for_transaction
+from flask_backend.utils.category_mapping import get_category_for_transaction, is_income_category
 from flask_backend.database.models import db, Account, Person, Scope, ScopeAccess
 from flask_backend.database.tables import (
     expenses_table,
@@ -61,7 +61,8 @@ def get_expenses():
                 expenses_table.c.PlaidName,
                 expenses_table.c.PlaidMerchantLogoURL,
                 expenses_table.c.CategoryConfirmed,
-                expenses_table.c.PlaidPersonalFinanceCategoryPrimary
+                expenses_table.c.PlaidPersonalFinanceCategoryPrimary,
+                expenses_table.c.IsIncome
             )
             .select_from(
                 expenses_table.join(
@@ -105,10 +106,7 @@ def get_expenses():
                 expense["Amount"] = "${:,.2f}".format(expense["Amount"])
             elif expense["Currency"] == "EUR":
                 expense["Amount"] = "€{:,.2f}".format(expense["Amount"])
-            #added for income tag
-            if "IsIncome" not in expense:
-                category = expense.get("ExpenseCategory", "")
-                expense["IsIncome"] = category and category.startswith("Income:")
+            # IsIncome is now directly from database, no need for manual logic
 
         return jsonify({"success": True, "expenses": expenses})
 
@@ -210,6 +208,9 @@ def submit_new_expenses():
                                 "error": f"Invalid date: {day}-{month}-{year}",
                             })
 
+                        # Determine if this is an income transaction
+                        is_income = is_income_category(category)
+                        
                         conn.execute(
                             expenses_table.insert().values(
                                 ScopeID=scope,  # Use the scope ID directly
@@ -220,11 +221,13 @@ def submit_new_expenses():
                                 ExpenseDate=expense_date,
                                 Amount=float(amount.replace(",", "")),
                                 ExpenseCategory=category,
-                                PlaidMerchantName=merchant if merchant else None,  # Store merchant in Plaid field for consistency
-                                AdditionalNotes=notes,
+                                # Store merchant in a new field for manual entries to maintain consistency
+                                AdditionalNotes=f"Merchant: {merchant}\n{notes}" if merchant and notes else (merchant if merchant else notes),
                                 Currency=current_user.currency,
                                 CreateDate=datetime.now().date(),
-                                LastUpdated=datetime.now().date()
+                                LastUpdated=datetime.now().date(),
+                                CategoryConfirmed=True,  # Manual entries are pre-confirmed by user
+                                IsIncome=is_income
                             )
                         )
 
@@ -513,6 +516,9 @@ def update_expense():
         notes = expense.get("notes")
 
         expense_date = datetime.strptime(f"{year}-{month}-{day}", "%Y-%B-%d").date()
+        
+        # Determine if this is an income transaction
+        is_income = is_income_category(category)
 
         with current_app.config["ENGINE"].connect() as conn:
             update_stmt = (
@@ -528,10 +534,11 @@ def update_expense():
                     ExpenseDate=expense_date,
                     Amount=float(amount.replace(",", "")),
                     ExpenseCategory=category,
-                    PlaidMerchantName=merchant if merchant else None,
-                    AdditionalNotes=notes,
+                    # For consistency, store merchant info in notes if it's a manual edit
+                    AdditionalNotes=f"Merchant: {merchant}\n{notes}" if merchant and notes else (merchant if merchant else notes),
                     LastUpdated=datetime.now().date(),
-                    CategoryConfirmed=True  # Set to True when manually edited (for plaid automatic transactions)
+                    CategoryConfirmed=True,  # Set to True when manually edited
+                    IsIncome=is_income
                 )
             )
             result = conn.execute(update_stmt)
@@ -586,6 +593,8 @@ def bulk_update_expenses():
         if 'category' in updates:
             update_values['ExpenseCategory'] = updates['category']
             update_values['CategoryConfirmed'] = True
+            # Determine if this is an income transaction
+            update_values['IsIncome'] = is_income_category(updates['category'])
         # Update scope if provided
         if 'scope' in updates:
             # Verify the scope is accessible to the user

@@ -10,7 +10,8 @@ from sqlalchemy import (
     Boolean,
     ForeignKey,   
     Text, 
-    DateTime, 
+    DateTime,
+    Enum,
 )
 
 metadata = MetaData()
@@ -77,6 +78,8 @@ expenses_table = Table(
     Column("Currency", String(50)),
     Column("SuggestedCategory", String(255)),
     Column("CategoryConfirmed", Boolean),
+    Column("MerchantName", String(255)),
+    Column("SourceType", Enum("manual", "plaid", name="source_type_enum")),
     # Plaid-specific fields:
     Column("PlaidAccountID", String(255)),
     Column("PlaidTransactionID", String(255)),

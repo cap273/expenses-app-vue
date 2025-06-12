@@ -33,6 +33,9 @@ var createExpensesTableScript = '''
     Currency NVARCHAR(50), -- Currency of the transaction
     SuggestedCategory NVARCHAR(255), -- Category suggested by the ML model
     CategoryConfirmed BIT, -- Indicates if the user confirmed the ML-suggested category
+    MerchantName NVARCHAR(255), -- Unified merchant name field for both manual and Plaid expenses
+    SourceType NVARCHAR(10) CHECK (SourceType IN ('manual', 'plaid')), -- Source type enum
+    IsIncome BIT DEFAULT 0, -- Indicates if this is an income transaction
 
     -- Fields added to support Plaid data:
     PlaidAccountID NVARCHAR(255),                           -- Stores Plaid's "account_id"

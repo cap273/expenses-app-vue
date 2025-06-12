@@ -57,6 +57,8 @@ def get_expenses():
                 # Plaid-related fields
                 expenses_table.c.PlaidAccountID,
                 expenses_table.c.PlaidTransactionID,
+                expenses_table.c.MerchantName,
+                expenses_table.c.SourceType,
                 expenses_table.c.PlaidMerchantName,
                 expenses_table.c.PlaidName,
                 expenses_table.c.PlaidMerchantLogoURL,
@@ -221,8 +223,9 @@ def submit_new_expenses():
                                 ExpenseDate=expense_date,
                                 Amount=float(amount.replace(",", "")),
                                 ExpenseCategory=category,
-                                # Store merchant in a new field for manual entries to maintain consistency
-                                AdditionalNotes=f"Merchant: {merchant}\n{notes}" if merchant and notes else (merchant if merchant else notes),
+                                MerchantName=merchant,
+                                SourceType="manual",
+                                AdditionalNotes=notes,
                                 Currency=current_user.currency,
                                 CreateDate=datetime.now().date(),
                                 LastUpdated=datetime.now().date(),
@@ -389,6 +392,8 @@ def submit_plaid_transactions():
                     "Amount": txn.get("amount"),
                     "AdjustedAmount": txn.get("amount"),  # Initially the same as Amount
                     "ExpenseCategory": category,  # Can be updated later (updated by janusz eventually)
+                    "MerchantName": txn.get("merchant_name"),
+                    "SourceType": "plaid",
                     "AdditionalNotes": None,
                     "CreateDate": datetime.now().date(),
                     "LastUpdated": datetime.now().date(),
@@ -534,8 +539,8 @@ def update_expense():
                     ExpenseDate=expense_date,
                     Amount=float(amount.replace(",", "")),
                     ExpenseCategory=category,
-                    # For consistency, store merchant info in notes if it's a manual edit
-                    AdditionalNotes=f"Merchant: {merchant}\n{notes}" if merchant and notes else (merchant if merchant else notes),
+                    MerchantName=merchant,
+                    AdditionalNotes=notes,
                     LastUpdated=datetime.now().date(),
                     CategoryConfirmed=True,  # Set to True when manually edited
                     IsIncome=is_income

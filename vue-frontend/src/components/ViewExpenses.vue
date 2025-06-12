@@ -150,8 +150,8 @@
             </template>
             <template #item.Merchant="{ item }">
               <div class="merchant-cell">
-                <span v-if="getMerchantName(item)" class="merchant-name">
-                  {{ getMerchantName(item) }}
+                <span v-if="item.MerchantName" class="merchant-name">
+                  {{ item.MerchantName }}
                 </span>
                 <span v-else class="merchant-placeholder">
                   —
@@ -600,7 +600,7 @@ import InputExpenses from './InputExpenses.vue';
 import ExpenseChart from './ExpenseCharts.vue';
 import { formatDate, adjustForTimezone } from '@/utils/dateUtils';
 import { formatCurrency } from '@/utils/formatUtils';
-import { getBankName, getBankAccountDetails, getPlaidCategory, getMerchantName } from '@/utils/dataUtilities';
+import { getBankName, getBankAccountDetails, getPlaidCategory } from '@/utils/dataUtilities';
 
 export default {
   components: {
@@ -768,7 +768,7 @@ export default {
       
       const searchFields = [
         actualItem?.ExpenseCategory,
-        getMerchantName(actualItem),
+        actualItem?.MerchantName,
         actualItem?.AdditionalNotes,
         actualItem?.ScopeName,
         actualItem?.Amount?.toString(),
@@ -1092,7 +1092,7 @@ export default {
             const date = formatDate(adjustForTimezone(expense.ExpenseDate));
             const amount = expense.Amount?.toString().replace(/[^0-9.-]+/g, '') || '0';
             const category = `"${expense.ExpenseCategory || ''}"`;
-            const merchant = `"${getMerchantName(expense) || ''}"`;
+            const merchant = `"${expense.MerchantName || ''}"`;
             const notes = `"${expense.AdditionalNotes || ''}"`;
             const scope = `"${expense.ScopeName || ''}"`;
             const source = expense.PlaidAccountID ? 
@@ -1203,7 +1203,6 @@ export default {
       getBankName,
       getBankAccountDetails,
       getPlaidCategory,
-      getMerchantName,
       formatDate,
       formatDateSimple,
 

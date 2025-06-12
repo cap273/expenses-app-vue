@@ -130,35 +130,6 @@ export const getPlaidCategory = (expense) => {
   return expense.PlaidMerchantName || expense.PlaidName || 'Uncategorized';
 };
 
-/**
- * Gets merchant information from both manual and Plaid expenses consistently
- * @param {Object} expense - Expense object
- * @returns {string} - Merchant name or empty string
- */
-export const getMerchantName = (expense) => {
-  // For Plaid transactions, prefer PlaidMerchantName, then PlaidName
-  if (expense.PlaidMerchantName) {
-    return expense.PlaidMerchantName;
-  }
-  
-  if (expense.PlaidName) {
-    return expense.PlaidName;
-  }
-  
-  // For manual entries, extract merchant from notes if it follows our pattern
-  if (expense.AdditionalNotes && expense.AdditionalNotes.startsWith('Merchant: ')) {
-    const lines = expense.AdditionalNotes.split('\n');
-    const merchantLine = lines[0];
-    return merchantLine.replace('Merchant: ', '');
-  }
-  
-  // Legacy support for old manual entries that stored merchant in PlaidMerchantName
-  if (expense.PlaidMerchantName && !expense.PlaidTransactionID) {
-    return expense.PlaidMerchantName;
-  }
-  
-  return '';
-};
   
   // Export all utilities
   export default {

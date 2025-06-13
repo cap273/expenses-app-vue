@@ -129,6 +129,7 @@ export const getPlaidCategory = (expense) => {
   // Use merchant name or transaction name as a fallback
   return expense.PlaidMerchantName || expense.PlaidName || 'Uncategorized';
 };
+
   
   // Export all utilities
   export default {

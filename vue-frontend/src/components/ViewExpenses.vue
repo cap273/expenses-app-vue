@@ -150,8 +150,8 @@
             </template>
             <template #item.Merchant="{ item }">
               <div class="merchant-cell">
-                <span v-if="item.PlaidMerchantName || item.PlaidName || item.Merchant" class="merchant-name">
-                  {{ item.PlaidMerchantName || item.PlaidName || item.Merchant }}
+                <span v-if="item.MerchantName" class="merchant-name">
+                  {{ item.MerchantName }}
                 </span>
                 <span v-else class="merchant-placeholder">
                   —
@@ -768,9 +768,7 @@ export default {
       
       const searchFields = [
         actualItem?.ExpenseCategory,
-        actualItem?.PlaidMerchantName,
-        actualItem?.PlaidName,
-        actualItem?.Merchant,
+        actualItem?.MerchantName,
         actualItem?.AdditionalNotes,
         actualItem?.ScopeName,
         actualItem?.Amount?.toString(),
@@ -880,6 +878,9 @@ export default {
         if (data.success) {
           expenses.value = expenses.value.filter(exp => exp.ExpenseID !== expenseId);
           updateMonthGroups();
+          
+          // Dispatch global event for other components to refresh
+          window.dispatchEvent(new CustomEvent('expenseUpdated'));
         }
       } catch (error) {
         console.error("Error:", error);
@@ -906,6 +907,9 @@ export default {
           await fetchExpenses();
           selectedExpenses.value = [];
           alert(`Successfully deleted ${selectedIds.length} expenses`);
+          
+          // Dispatch global event for other components to refresh
+          window.dispatchEvent(new CustomEvent('expenseUpdated'));
         }
       } catch (error) {
         console.error("Error:", error);
@@ -989,6 +993,9 @@ export default {
       fetchExpenses();
       isEditDialogOpen.value = false;
       isAddDialogOpen.value = false;
+      
+      // Dispatch global event for other components to refresh
+      window.dispatchEvent(new CustomEvent('expenseUpdated'));
     };
 
     // Add expense dialog
@@ -1094,7 +1101,7 @@ export default {
             const date = formatDate(adjustForTimezone(expense.ExpenseDate));
             const amount = expense.Amount?.toString().replace(/[^0-9.-]+/g, '') || '0';
             const category = `"${expense.ExpenseCategory || ''}"`;
-            const merchant = `"${expense.PlaidMerchantName || expense.PlaidName || expense.Merchant || ''}"`;
+            const merchant = `"${expense.MerchantName || ''}"`;
             const notes = `"${expense.AdditionalNotes || ''}"`;
             const scope = `"${expense.ScopeName || ''}"`;
             const source = expense.PlaidAccountID ? 

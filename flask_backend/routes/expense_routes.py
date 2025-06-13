@@ -9,7 +9,7 @@ from werkzeug.exceptions import BadRequestKeyError
 
 from flask_backend.utils.db_tools import get_categories
 from flask_backend.utils.session import login_required_api
-from flask_backend.utils.category_mapping import get_category_for_transaction
+from flask_backend.utils.category_mapping import get_category_for_transaction, is_income_category
 from flask_backend.database.models import db, Account, Person, Scope, ScopeAccess
 from flask_backend.database.tables import (
     expenses_table,
@@ -17,6 +17,7 @@ from flask_backend.database.tables import (
     persons_table,
     scopes_table,
     scope_access_table,
+    category_targets_table,
 )
 
 expense_routes = Blueprint("expense_routes", __name__)
@@ -57,11 +58,14 @@ def get_expenses():
                 # Plaid-related fields
                 expenses_table.c.PlaidAccountID,
                 expenses_table.c.PlaidTransactionID,
+                expenses_table.c.MerchantName,
+                expenses_table.c.SourceType,
                 expenses_table.c.PlaidMerchantName,
                 expenses_table.c.PlaidName,
                 expenses_table.c.PlaidMerchantLogoURL,
                 expenses_table.c.CategoryConfirmed,
-                expenses_table.c.PlaidPersonalFinanceCategoryPrimary
+                expenses_table.c.PlaidPersonalFinanceCategoryPrimary,
+                expenses_table.c.IsIncome
             )
             .select_from(
                 expenses_table.join(
@@ -105,10 +109,7 @@ def get_expenses():
                 expense["Amount"] = "${:,.2f}".format(expense["Amount"])
             elif expense["Currency"] == "EUR":
                 expense["Amount"] = "€{:,.2f}".format(expense["Amount"])
-            #added for income tag
-            if "IsIncome" not in expense:
-                category = expense.get("ExpenseCategory", "")
-                expense["IsIncome"] = category and category.startswith("Income:")
+            # IsIncome is now directly from database, no need for manual logic
 
         return jsonify({"success": True, "expenses": expenses})
 
@@ -210,6 +211,9 @@ def submit_new_expenses():
                                 "error": f"Invalid date: {day}-{month}-{year}",
                             })
 
+                        # Determine if this is an income transaction
+                        is_income = is_income_category(category)
+                        
                         conn.execute(
                             expenses_table.insert().values(
                                 ScopeID=scope,  # Use the scope ID directly
@@ -220,11 +224,14 @@ def submit_new_expenses():
                                 ExpenseDate=expense_date,
                                 Amount=float(amount.replace(",", "")),
                                 ExpenseCategory=category,
-                                PlaidMerchantName=merchant if merchant else None,  # Store merchant in Plaid field for consistency
+                                MerchantName=merchant,
+                                SourceType="manual",
                                 AdditionalNotes=notes,
                                 Currency=current_user.currency,
                                 CreateDate=datetime.now().date(),
-                                LastUpdated=datetime.now().date()
+                                LastUpdated=datetime.now().date(),
+                                CategoryConfirmed=True,  # Manual entries are pre-confirmed by user
+                                IsIncome=is_income
                             )
                         )
 
@@ -386,6 +393,8 @@ def submit_plaid_transactions():
                     "Amount": txn.get("amount"),
                     "AdjustedAmount": txn.get("amount"),  # Initially the same as Amount
                     "ExpenseCategory": category,  # Can be updated later (updated by janusz eventually)
+                    "MerchantName": txn.get("merchant_name"),
+                    "SourceType": "plaid",
                     "AdditionalNotes": None,
                     "CreateDate": datetime.now().date(),
                     "LastUpdated": datetime.now().date(),
@@ -513,6 +522,9 @@ def update_expense():
         notes = expense.get("notes")
 
         expense_date = datetime.strptime(f"{year}-{month}-{day}", "%Y-%B-%d").date()
+        
+        # Determine if this is an income transaction
+        is_income = is_income_category(category)
 
         with current_app.config["ENGINE"].connect() as conn:
             update_stmt = (
@@ -528,10 +540,11 @@ def update_expense():
                     ExpenseDate=expense_date,
                     Amount=float(amount.replace(",", "")),
                     ExpenseCategory=category,
-                    PlaidMerchantName=merchant if merchant else None,
+                    MerchantName=merchant,
                     AdditionalNotes=notes,
                     LastUpdated=datetime.now().date(),
-                    CategoryConfirmed=True  # Set to True when manually edited (for plaid automatic transactions)
+                    CategoryConfirmed=True,  # Set to True when manually edited
+                    IsIncome=is_income
                 )
             )
             result = conn.execute(update_stmt)
@@ -586,6 +599,8 @@ def bulk_update_expenses():
         if 'category' in updates:
             update_values['ExpenseCategory'] = updates['category']
             update_values['CategoryConfirmed'] = True
+            # Determine if this is an income transaction
+            update_values['IsIncome'] = is_income_category(updates['category'])
         # Update scope if provided
         if 'scope' in updates:
             # Verify the scope is accessible to the user
@@ -692,3 +707,581 @@ def bulk_update_expenses():
     except Exception as e:
         print(f"Error in bulk update: {str(e)}")
         return jsonify({"success": False, "message": str(e)})
+
+@expense_routes.route("/api/get_category_averages", methods=["GET"])
+@login_required_api
+def get_category_averages():
+    """
+    Calculate 12-month category averages for the user's accessible scopes
+    """
+    try:
+        # Get user's accessible scope IDs
+        scope_query = (
+            db.session.query(ScopeAccess.ScopeID)
+            .filter(
+                ScopeAccess.AccountID == current_user.id,
+                ScopeAccess.InviteStatus == 'accepted'
+            )
+        )
+        accessible_scope_ids = [result[0] for result in scope_query.all()]
+
+        if not accessible_scope_ids:
+            return jsonify({"success": True, "averages": []})
+
+        # Calculate 12 months ago from now
+        from datetime import datetime, timedelta
+        from dateutil.relativedelta import relativedelta
+        
+        end_date = datetime.now().date()
+        start_date = end_date - relativedelta(months=12)
+
+        with current_app.config["ENGINE"].connect() as connection:
+            # Query expenses from the last 12 months, excluding income
+            query = (
+                select(
+                    expenses_table.c.ExpenseCategory,
+                    expenses_table.c.Amount
+                )
+                .where(
+                    and_(
+                        expenses_table.c.ScopeID.in_(accessible_scope_ids),
+                        expenses_table.c.ExpenseDate >= start_date,
+                        expenses_table.c.ExpenseDate <= end_date,
+                        expenses_table.c.IsIncome != True,  # Exclude income
+                        expenses_table.c.ExpenseCategory.isnot(None)  # Exclude null categories
+                    )
+                )
+            )
+            
+            result = connection.execute(query)
+            expenses = result.fetchall()
+
+        # Calculate category totals and count months with transactions
+        category_totals = {}
+        months_with_transactions = set()
+        
+        for expense in expenses:
+            category = expense.ExpenseCategory
+            amount = expense.Amount
+            # Track which months had transactions
+            expense_month = (expense.ExpenseDate.year, expense.ExpenseDate.month)
+            months_with_transactions.add(expense_month)
+            
+            if category in category_totals:
+                category_totals[category] += amount
+            else:
+                category_totals[category] = amount
+
+        # Calculate actual months with activity (minimum 1 to avoid division by zero)
+        active_months = max(len(months_with_transactions), 1)
+        
+        # Calculate monthly averages based on active months only
+        category_averages = []
+        for category, total in category_totals.items():
+            monthly_average = total / active_months
+            category_averages.append({
+                "category": category,
+                "monthly_average": round(monthly_average, 2),
+                "total_12_months": round(total, 2),
+                "active_months": active_months
+            })
+
+        # Sort by monthly average (descending) and take top 10
+        category_averages.sort(key=lambda x: x["monthly_average"], reverse=True)
+        top_categories = category_averages[:10]
+
+        return jsonify({
+            "success": True,
+            "averages": top_categories,
+            "period": {
+                "start_date": start_date.isoformat(),
+                "end_date": end_date.isoformat(),
+                "active_months": active_months,
+                "total_months_in_period": 12
+            }
+        })
+
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)})
+
+@expense_routes.route("/api/get_category_targets", methods=["GET"])
+@login_required_api
+def get_category_targets():
+    """
+    Get user's category targets for accessible scopes
+    """
+    try:
+        # Get user's accessible scope IDs
+        scope_query = (
+            db.session.query(ScopeAccess.ScopeID)
+            .filter(
+                ScopeAccess.AccountID == current_user.id,
+                ScopeAccess.InviteStatus == 'accepted'
+            )
+        )
+        accessible_scope_ids = [result[0] for result in scope_query.all()]
+
+        with current_app.config["ENGINE"].connect() as connection:
+            query = (
+                select(
+                    category_targets_table.c.TargetID,
+                    category_targets_table.c.ScopeID,
+                    category_targets_table.c.CategoryName,
+                    category_targets_table.c.MonthlyTarget,
+                    category_targets_table.c.IsActive
+                )
+                .where(
+                    and_(
+                        category_targets_table.c.AccountID == current_user.id,
+                        category_targets_table.c.ScopeID.in_(accessible_scope_ids),
+                        category_targets_table.c.IsActive == True
+                    )
+                )
+            )
+            
+            result = connection.execute(query)
+            targets = result.fetchall()
+
+        targets_list = []
+        for target in targets:
+            targets_list.append({
+                "target_id": target.TargetID,
+                "scope_id": target.ScopeID,
+                "category": target.CategoryName,
+                "monthly_target": target.MonthlyTarget
+            })
+
+        return jsonify({"success": True, "targets": targets_list})
+
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)})
+
+@expense_routes.route("/api/save_category_targets", methods=["POST"])
+@login_required_api
+def save_category_targets():
+    """
+    Save or update category targets for the user
+    """
+    try:
+        data = request.json
+        targets = data.get("targets", [])
+        
+        if not targets:
+            return jsonify({"success": False, "error": "No targets provided"})
+
+        # Get user's accessible scope IDs
+        scope_query = (
+            db.session.query(ScopeAccess.ScopeID)
+            .filter(
+                ScopeAccess.AccountID == current_user.id,
+                ScopeAccess.InviteStatus == 'accepted'
+            )
+        )
+        accessible_scope_ids = [result[0] for result in scope_query.all()]
+
+        with current_app.config["ENGINE"].connect() as connection:
+            # First, deactivate all existing targets for the user
+            deactivate_stmt = (
+                category_targets_table.update()
+                .where(
+                    and_(
+                        category_targets_table.c.AccountID == current_user.id,
+                        category_targets_table.c.ScopeID.in_(accessible_scope_ids)
+                    )
+                )
+                .values(IsActive=False, LastUpdated=datetime.now().date())
+            )
+            connection.execute(deactivate_stmt)
+
+            # Insert new targets
+            for target in targets:
+                category = target.get("category")
+                monthly_target = target.get("monthly_target")
+                scope_id = target.get("scope_id")
+
+                if not all([category, monthly_target is not None, scope_id]):
+                    continue
+
+                # Verify scope access
+                if scope_id not in accessible_scope_ids:
+                    continue
+
+                connection.execute(
+                    category_targets_table.insert().values(
+                        ScopeID=scope_id,
+                        AccountID=current_user.id,
+                        CategoryName=category,
+                        MonthlyTarget=float(monthly_target),
+                        IsActive=True,
+                        CreateDate=datetime.now().date(),
+                        LastUpdated=datetime.now().date()
+                    )
+                )
+
+            connection.commit()
+
+        return jsonify({"success": True, "message": "Category targets saved successfully"})
+
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)})
+
+@expense_routes.route("/api/get_category_progress", methods=["GET"])
+@login_required_api
+def get_category_progress():
+    """
+    Get current month progress for each category target
+    """
+    try:
+        # Get user's accessible scope IDs
+        scope_query = (
+            db.session.query(ScopeAccess.ScopeID)
+            .filter(
+                ScopeAccess.AccountID == current_user.id,
+                ScopeAccess.InviteStatus == 'accepted'
+            )
+        )
+        accessible_scope_ids = [result[0] for result in scope_query.all()]
+
+        # Get current month boundaries
+        now = datetime.now()
+        current_month = now.month
+        current_year = now.year
+        
+        with current_app.config["ENGINE"].connect() as connection:
+            # Get active targets
+            targets_query = (
+                select(
+                    category_targets_table.c.TargetID,
+                    category_targets_table.c.ScopeID,
+                    category_targets_table.c.CategoryName,
+                    category_targets_table.c.MonthlyTarget
+                )
+                .where(
+                    and_(
+                        category_targets_table.c.AccountID == current_user.id,
+                        category_targets_table.c.ScopeID.in_(accessible_scope_ids),
+                        category_targets_table.c.IsActive == True
+                    )
+                )
+            )
+            
+            targets_result = connection.execute(targets_query)
+            targets = targets_result.fetchall()
+
+            if not targets:
+                return jsonify({"success": True, "progress": []})
+
+            # Get current month spending for each category
+            from datetime import date
+            month_start = date(current_year, current_month, 1)
+            if current_month == 12:
+                month_end = date(current_year + 1, 1, 1)
+            else:
+                month_end = date(current_year, current_month + 1, 1)
+            
+            expenses_query = (
+                select(
+                    expenses_table.c.ExpenseCategory,
+                    expenses_table.c.Amount,
+                    expenses_table.c.ScopeID
+                )
+                .where(
+                    and_(
+                        expenses_table.c.ScopeID.in_(accessible_scope_ids),
+                        expenses_table.c.ExpenseDate >= month_start,
+                        expenses_table.c.ExpenseDate < month_end,
+                        expenses_table.c.IsIncome != True
+                    )
+                )
+            )
+            
+            expenses_result = connection.execute(expenses_query)
+            expenses = expenses_result.fetchall()
+
+        # Calculate current spending by category and scope
+        current_spending = {}
+        for expense in expenses:
+            key = (expense.ExpenseCategory, expense.ScopeID)
+            if key in current_spending:
+                current_spending[key] += expense.Amount
+            else:
+                current_spending[key] = expense.Amount
+
+        # Build progress data
+        progress_data = []
+        target_categories = set()
+        everything_else_target = None
+        
+        for target in targets:
+            if target.CategoryName == "Everything Else":
+                everything_else_target = target
+                continue  # Don't add "Everything Else" to regular targets here
+                
+            key = (target.CategoryName, target.ScopeID)
+            current_spent = current_spending.get(key, 0)
+            progress_percentage = (current_spent / target.MonthlyTarget * 100) if target.MonthlyTarget > 0 else 0
+            
+            progress_data.append({
+                "target_id": target.TargetID,
+                "scope_id": target.ScopeID,
+                "category": target.CategoryName,
+                "monthly_target": target.MonthlyTarget,
+                "current_spent": round(current_spent, 2),
+                "progress_percentage": round(progress_percentage, 1),
+                "remaining": round(target.MonthlyTarget - current_spent, 2),
+                "is_over_budget": current_spent > target.MonthlyTarget
+            })
+            
+            # Track categories that have targets (for all scopes)
+            target_categories.add(target.CategoryName)
+
+        # Calculate "Everything Else" spending
+        everything_else_spent = 0
+        for (category, scope_id), amount in current_spending.items():
+            if category not in target_categories:
+                everything_else_spent += amount
+
+        # Always add "Everything Else" as a virtual category (even if $0)
+        if everything_else_target:
+            # If there's a target for "Everything Else", treat it like a normal category
+            progress_percentage = (everything_else_spent / everything_else_target.MonthlyTarget * 100) if everything_else_target.MonthlyTarget > 0 else 0
+            progress_data.append({
+                "target_id": everything_else_target.TargetID,
+                "scope_id": everything_else_target.ScopeID,
+                "category": "Everything Else",
+                "monthly_target": everything_else_target.MonthlyTarget,
+                "current_spent": round(everything_else_spent, 2),
+                "progress_percentage": round(progress_percentage, 1),
+                "remaining": round(everything_else_target.MonthlyTarget - everything_else_spent, 2),
+                "is_over_budget": everything_else_spent > everything_else_target.MonthlyTarget,
+                "is_everything_else": True
+            })
+        else:
+            # No target set for "Everything Else"
+            progress_data.append({
+                "target_id": None,
+                "scope_id": None,
+                "category": "Everything Else",
+                "monthly_target": 0,
+                "current_spent": round(everything_else_spent, 2),
+                "progress_percentage": 0,
+                "remaining": round(-everything_else_spent, 2),
+                "is_over_budget": False,
+                "is_everything_else": True
+            })
+
+        # Sort by progress percentage (descending), but put "Everything Else" at the end
+        progress_data.sort(key=lambda x: (x.get("is_everything_else", False), -x["progress_percentage"]))
+
+        return jsonify({
+            "success": True,
+            "progress": progress_data,
+            "month": now.strftime("%B %Y")
+        })
+
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)})
+
+@expense_routes.route("/api/get_available_categories", methods=["GET"])
+@login_required_api
+def get_available_categories():
+    """
+    Get all categories that have been used in the user's expenses plus default categories
+    """
+    try:
+        # Get user's accessible scope IDs
+        scope_query = (
+            db.session.query(ScopeAccess.ScopeID)
+            .filter(
+                ScopeAccess.AccountID == current_user.id,
+                ScopeAccess.InviteStatus == 'accepted'
+            )
+        )
+        accessible_scope_ids = [result[0] for result in scope_query.all()]
+
+        categories_set = set()
+        
+        with current_app.config["ENGINE"].connect() as connection:
+            # Get categories from user's expenses
+            expenses_query = (
+                select(expenses_table.c.ExpenseCategory)
+                .where(
+                    and_(
+                        expenses_table.c.ScopeID.in_(accessible_scope_ids),
+                        expenses_table.c.ExpenseCategory.isnot(None),
+                        expenses_table.c.IsIncome != True
+                    )
+                )
+                .distinct()
+            )
+            
+            result = connection.execute(expenses_query)
+            expense_categories = result.fetchall()
+            
+            for row in expense_categories:
+                if row.ExpenseCategory:
+                    categories_set.add(row.ExpenseCategory)
+            
+            # Get default categories from the categories table
+            default_categories_query = select(categories_table.c.CategoryName)
+            result = connection.execute(default_categories_query)
+            default_categories = result.fetchall()
+            
+            for row in default_categories:
+                categories_set.add(row.CategoryName)
+
+        # Convert to sorted list
+        categories_list = sorted(list(categories_set))
+        
+        # Add "Everything Else" as a special category option
+        if "Everything Else" not in categories_list:
+            categories_list.append("Everything Else")
+        
+        return jsonify({
+            "success": True,
+            "categories": categories_list
+        })
+
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)})
+
+@expense_routes.route("/api/get_spending_comparison", methods=["GET"])
+@login_required_api
+def get_spending_comparison():
+    """
+    Get current month spending compared to average monthly spending (prorated by date)
+    """
+    try:
+        # Get user's accessible scope IDs
+        scope_query = (
+            db.session.query(ScopeAccess.ScopeID)
+            .filter(
+                ScopeAccess.AccountID == current_user.id,
+                ScopeAccess.InviteStatus == 'accepted'
+            )
+        )
+        accessible_scope_ids = [result[0] for result in scope_query.all()]
+
+        if not accessible_scope_ids:
+            return jsonify({"success": True, "comparison": None})
+
+        from datetime import datetime, date
+        from dateutil.relativedelta import relativedelta
+        import calendar
+        
+        now = datetime.now()
+        current_date = now.date()
+        current_month = now.month
+        current_year = now.year
+        current_day = now.day
+        
+        # Get total days in current month
+        days_in_month = calendar.monthrange(current_year, current_month)[1]
+        
+        # Calculate 12 months ago from now
+        end_date = current_date
+        start_date = end_date - relativedelta(months=12)
+
+        with current_app.config["ENGINE"].connect() as connection:
+            # Get current month spending
+            current_month_query = (
+                select(expenses_table.c.Amount)
+                .where(
+                    and_(
+                        expenses_table.c.ScopeID.in_(accessible_scope_ids),
+                        expenses_table.c.Month == now.strftime("%B"),
+                        expenses_table.c.Year == current_year,
+                        expenses_table.c.IsIncome != True
+                    )
+                )
+            )
+            
+            current_result = connection.execute(current_month_query)
+            current_expenses = current_result.fetchall()
+            current_month_total = sum(expense.Amount for expense in current_expenses)
+            
+            # Get historical expenses for average calculation
+            historical_query = (
+                select(
+                    expenses_table.c.Amount,
+                    expenses_table.c.ExpenseDate
+                )
+                .where(
+                    and_(
+                        expenses_table.c.ScopeID.in_(accessible_scope_ids),
+                        expenses_table.c.ExpenseDate >= start_date,
+                        expenses_table.c.ExpenseDate <= end_date,
+                        expenses_table.c.IsIncome != True
+                    )
+                )
+            )
+            
+            historical_result = connection.execute(historical_query)
+            historical_expenses = historical_result.fetchall()
+
+        # Calculate monthly totals and count active months
+        monthly_totals = {}
+        months_with_transactions = set()
+        
+        for expense in historical_expenses:
+            expense_month_key = (expense.ExpenseDate.year, expense.ExpenseDate.month)
+            months_with_transactions.add(expense_month_key)
+            
+            if expense_month_key in monthly_totals:
+                monthly_totals[expense_month_key] += expense.Amount
+            else:
+                monthly_totals[expense_month_key] = expense.Amount
+
+        # Calculate average monthly spending (excluding current month if it's in the data)
+        current_month_key = (current_year, current_month)
+        if current_month_key in monthly_totals:
+            # Remove current month from historical calculation
+            del monthly_totals[current_month_key]
+            months_with_transactions.discard(current_month_key)
+        
+        active_months = len(months_with_transactions)
+        
+        if active_months > 0:
+            total_historical_spending = sum(monthly_totals.values())
+            average_monthly_spending = total_historical_spending / active_months
+            
+            # Calculate prorated average for current date
+            progress_through_month = current_day / days_in_month
+            expected_spending_by_now = average_monthly_spending * progress_through_month
+            
+            # Calculate comparison metrics
+            difference = current_month_total - expected_spending_by_now
+            percentage_difference = (difference / expected_spending_by_now * 100) if expected_spending_by_now > 0 else 0
+            
+            # Projected month-end spending based on current pace
+            if current_day > 0:
+                daily_average = current_month_total / current_day
+                projected_month_end = daily_average * days_in_month
+            else:
+                projected_month_end = 0
+                
+            comparison_data = {
+                "current_month_total": round(current_month_total, 2),
+                "average_monthly_spending": round(average_monthly_spending, 2),
+                "expected_spending_by_now": round(expected_spending_by_now, 2),
+                "difference": round(difference, 2),
+                "percentage_difference": round(percentage_difference, 1),
+                "projected_month_end": round(projected_month_end, 2),
+                "current_day": current_day,
+                "days_in_month": days_in_month,
+                "progress_through_month": round(progress_through_month * 100, 1),
+                "active_months": active_months,
+                "month_name": now.strftime("%B"),
+                "is_ahead": difference > 0,
+                "is_behind": difference < 0
+            }
+        else:
+            comparison_data = None
+
+        return jsonify({
+            "success": True,
+            "comparison": comparison_data
+        })
+
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)})

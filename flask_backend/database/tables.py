@@ -10,7 +10,8 @@ from sqlalchemy import (
     Boolean,
     ForeignKey,   
     Text, 
-    DateTime, 
+    DateTime,
+    Enum,
 )
 
 metadata = MetaData()
@@ -77,6 +78,8 @@ expenses_table = Table(
     Column("Currency", String(50)),
     Column("SuggestedCategory", String(255)),
     Column("CategoryConfirmed", Boolean),
+    Column("MerchantName", String(255)),
+    Column("SourceType", Enum("manual", "plaid", name="source_type_enum")),
     # Plaid-specific fields:
     Column("PlaidAccountID", String(255)),
     Column("PlaidTransactionID", String(255)),
@@ -165,6 +168,21 @@ plaid_items_table = Table(
     Column("InstitutionName", String(255), nullable=True),
     Column("InstitutionID", String(255), nullable=True),
     Column("LastSynced", DateTime, nullable=True),
+    Column("CreateDate", Date),
+    Column("LastUpdated", Date),
+    extend_existing=False,
+    implicit_returning=False,
+)
+
+category_targets_table = Table(
+    "category_targets",
+    metadata,
+    Column("TargetID", Integer, primary_key=True),
+    Column("ScopeID", Integer, nullable=False),
+    Column("AccountID", Integer, nullable=False),
+    Column("CategoryName", String(255), nullable=False),
+    Column("MonthlyTarget", Float, nullable=False),
+    Column("IsActive", Boolean, default=True),
     Column("CreateDate", Date),
     Column("LastUpdated", Date),
     extend_existing=False,

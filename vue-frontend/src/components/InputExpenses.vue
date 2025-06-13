@@ -408,8 +408,12 @@ export default {
                         year: newVal.Year || '',
                         amount: newVal.Amount ? newVal.Amount.replace(/[^0-9.]/g, '') : '',
                         category: newVal.ExpenseCategory || '',
-                        merchant: newVal.PlaidMerchantName || newVal.PlaidName || '',
-                        notes: newVal.AdditionalNotes || '',
+                        merchant: newVal.MerchantName || newVal.PlaidMerchantName || newVal.PlaidName || 
+                                 (newVal.AdditionalNotes && newVal.AdditionalNotes.startsWith('Merchant: ') ? 
+                                  newVal.AdditionalNotes.split('\n')[0].replace('Merchant: ', '') : ''),
+                        notes: newVal.AdditionalNotes && newVal.AdditionalNotes.startsWith('Merchant: ') ? 
+                               newVal.AdditionalNotes.split('\n').slice(1).join('\n') : 
+                               (newVal.AdditionalNotes || ''),
                         ExpenseID: newVal.ExpenseID,
                         showDatePicker: false
                     }];
@@ -615,6 +619,9 @@ export default {
                     
                     //New emit for updating expenses
                     emit('update-expenses');
+                    
+                    // Dispatch global event for other components to refresh
+                    window.dispatchEvent(new CustomEvent('expenseUpdated'));
                 } else {
                     responseMessage.value = { message: responseData.error, type: 'error' };
                 }

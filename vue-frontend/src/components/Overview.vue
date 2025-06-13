@@ -46,6 +46,37 @@
                 <div :class="amountClass(monthlyTotal, 'info-value')">
                   {{ formatCurrency(monthlyTotal) }}
                 </div>
+                
+                <!-- Spending Comparison -->
+                <div v-if="spendingComparison && !loadingComparison" class="comparison-container mt-2">
+                  <div class="comparison-text">
+                    <span 
+                      :class="{
+                        'text-success': spendingComparison.is_behind,
+                        'text-warning': spendingComparison.is_ahead && Math.abs(spendingComparison.percentage_difference) <= 25,
+                        'text-error': spendingComparison.is_ahead && Math.abs(spendingComparison.percentage_difference) > 25
+                      }"
+                    >
+                      {{ spendingComparison.is_ahead ? '+' : '' }}{{ formatCurrency(Math.abs(spendingComparison.difference)) }}
+                      {{ spendingComparison.is_ahead ? 'above' : 'below' }}
+                    </span>
+                    <div class="text-caption text-medium-emphasis">
+                      vs avg by day {{ spendingComparison.current_day }}
+                    </div>
+                  </div>
+                  
+                  <div class="comparison-details mt-1">
+                    <div class="text-caption text-medium-emphasis">
+                      Expected: {{ formatCurrency(spendingComparison.expected_spending_by_now) }}
+                      <span class="mx-1">•</span>
+                      Projected: {{ formatCurrency(spendingComparison.projected_month_end) }}
+                    </div>
+                  </div>
+                </div>
+                
+                <div v-else-if="loadingComparison" class="d-flex align-center mt-2">
+                  <v-progress-circular indeterminate size="16" width="2" />
+                </div>
               </div>
             </v-col>
 
@@ -110,108 +141,10 @@
           </v-row>
         </v-card>
 
-        <!-- 2. Second row: Spending Insights, Top Categories -->
+        <!-- 2. Second row: Average Expenses with Target Tracking -->
         <v-row class="gy-4">
-          <!-- (A) Spending Insights -->
-          <v-col cols="12" md="4">
-            <v-card class="pa-3 hover-elevate h-100">
-              <div class="d-flex align-center justify-space-between mb-2">
-                <h3 class="text-h6 mb-0">Spending Insights</h3>
-              </div>
-              <v-divider class="mb-3"></v-divider>
-              
-              <div v-if="loading" class="d-flex justify-center my-2">
-                <v-progress-circular indeterminate size="24" />
-              </div>
-              <div v-else class="insights-container">
-                <div class="donut-container">
-                  <apexchart
-                    v-if="topSpentCategories.length > 0"
-                    type="donut"
-                    height="200"
-                    :options="categoryChartOptions"
-                    :series="categoryChartSeries"
-                  />
-                  <div v-else class="text-center pt-10">
-                    <span class="text-subtitle-2">No spending data available</span>
-                  </div>
-                </div>
-                
-                <div class="insights-summary mt-3">
-                  <div class="d-flex align-center mb-2">
-                    <v-icon color="primary" size="small" class="mr-2">mdi-wallet</v-icon>
-                    <span class="text-subtitle-2">Active Scopes: {{ activeScopes.length }}</span>
-                  </div>
-                  <div class="d-flex align-center mb-2">
-                    <v-icon color="primary" size="small" class="mr-2">mdi-calendar</v-icon>
-                    <span class="text-subtitle-2">Tracked Since: {{ trackingSince }}</span>
-                  </div>
-                  <div class="d-flex align-center">
-                    <v-icon color="primary" size="small" class="mr-2">mdi-tag-multiple</v-icon>
-                    <span class="text-subtitle-2">Top Category: {{ topCategory }}</span>
-                  </div>
-                </div>
-              </div>
-            </v-card>
-          </v-col>
-
-          <!-- (B) Top Categories -->
-          <v-col cols="12" md="8">
-            <v-card class="pa-3 hover-elevate h-100">
-              <div class="d-flex align-center justify-space-between mb-2">
-                <h3 class="text-h6 mb-0">Top Categories</h3>
-                <v-menu location="bottom end">
-                  <template v-slot:activator="{ props }">
-                    <v-btn icon variant="text" v-bind="props" size="small">
-                      <v-icon>mdi-dots-vertical</v-icon>
-                    </v-btn>
-                  </template>
-                  <v-list>
-                    <v-list-item @click="$router.push('/input_expenses')">
-                      <v-list-item-title>Add New Expense</v-list-item-title>
-                    </v-list-item>
-                    <v-list-item @click="$router.push('/view_expenses')">
-                      <v-list-item-title>View All Expenses</v-list-item-title>
-                    </v-list-item>
-                  </v-list>
-                </v-menu>
-              </div>
-              <v-divider class="mb-3"></v-divider>
-              
-              <div v-if="loading" class="d-flex justify-center my-4">
-                <v-progress-circular indeterminate size="24" />
-              </div>
-              <v-row v-else-if="topSpentCategories.length > 0" class="pa-2">
-                <v-col cols="12">
-                  <!-- Category list with full category names -->
-                  <div class="categories-list">
-                    <div 
-                      v-for="(cat, idx) in topSpentCategories" 
-                      :key="cat.category + idx"
-                      class="category-item"
-                    >
-                      <div class="d-flex align-center category-name-container">
-                        <div class="category-bar" 
-                          :style="{
-                            width: `${getCategoryBarWidth(cat.amount, idx)}%`,
-                            backgroundColor: getCategoryColor(idx)
-                          }"
-                        ></div>
-                        <div class="category-name-wrapper ml-2">
-                          {{ cat.category }}
-                        </div>
-                      </div>
-                      <span :class="amountClass(cat.amount, 'category-amount')">
-                        {{ formatCurrency(cat.amount) }}
-                      </span>
-                    </div>
-                  </div>
-                </v-col>
-              </v-row>
-              <div v-else class="text-center text-subtitle-2 my-4">
-                No data available
-              </div>
-            </v-card>
+          <v-col cols="12">
+            <AverageExpenses ref="averageExpensesRef" :selected-scopes="selectedScopes" />
           </v-col>
         </v-row>
 
@@ -318,8 +251,9 @@
 </template>
 
 <script>
-import { ref, onMounted, computed, watch } from 'vue'
+import { ref, onMounted, onUnmounted, computed, watch } from 'vue'
 import PlaidAccountsOverview from './PlaidComponents/PlaidAccountsOverview.vue'
+import AverageExpenses from './AverageExpenses.vue'
 import VueApexCharts from 'vue3-apexcharts'
 import { useTheme } from 'vuetify'
 import { formatDate, formatShortDate, adjustForTimezone, daysInMonth, getMonthName } from '@/utils/dateUtils';
@@ -329,6 +263,7 @@ export default {
   name: 'Overview',
   components: {
     PlaidAccountsOverview,
+    AverageExpenses,
     apexchart: VueApexCharts,
   },
   setup() {
@@ -357,21 +292,51 @@ export default {
     const error = ref(null);
     const timelineView = ref('Cumulative');
     const bankAccounts = ref([]);
-    const trackingSince = ref('N/A');
+    const spendingComparison = ref(null);
+    const loadingComparison = ref(true);
+    const averageExpensesRef = ref(null);
 
     onMounted(() => {
       fetchAllData();
       
-      // Set tracking since from computed value after data is loaded
-      watch(getTrackingSince, (newVal) => {
-        trackingSince.value = newVal;
-      });
+      // Listen for expense updates from other components
+      window.addEventListener('expenseUpdated', refreshExpenseData);
+    });
+
+    // Cleanup event listener on unmount
+    onUnmounted(() => {
+      window.removeEventListener('expenseUpdated', refreshExpenseData);
     });
 
     const fetchAllData = async () => {
       loading.value = true;
-      await Promise.all([fetchExpenses(), fetchScopes()]);
+      await Promise.all([fetchExpenses(), fetchScopes(), fetchSpendingComparison()]);
       loading.value = false;
+    };
+
+    // Method to refresh data when expenses are updated
+    const refreshExpenseData = async () => {
+      await fetchExpenses();
+      await fetchSpendingComparison();
+      // Refresh the AverageExpenses component
+      if (averageExpensesRef.value && averageExpensesRef.value.fetchProgressData) {
+        await averageExpensesRef.value.fetchProgressData();
+      }
+    };
+
+    const fetchSpendingComparison = async () => {
+      loadingComparison.value = true;
+      try {
+        const response = await fetch('/api/get_spending_comparison');
+        const data = await response.json();
+        if (data.success) {
+          spendingComparison.value = data.comparison;
+        }
+      } catch (err) {
+        console.error('Error fetching spending comparison:', err);
+      } finally {
+        loadingComparison.value = false;
+      }
     };
 
     // 1. Fetch expenses
@@ -441,63 +406,6 @@ export default {
         .slice(0, 5);
     });
 
-    // Top spent categories
-    const topSpentCategories = computed(() => {
-      const now = new Date();
-      const currentMonth = now.getMonth();
-      const currentYear = now.getFullYear();
-      const catMap = {};
-      
-      filteredExpenses.value.forEach(e => {
-        const d = adjustForTimezone(e.ExpenseDate);
-        if (d.getMonth() === currentMonth && d.getFullYear() === currentYear) {
-          const cat = e.ExpenseCategory || 'Uncategorized';
-          const amt = parseNumericValue(e.Amount);
-          catMap[cat] = (catMap[cat] || 0) + amt;
-        }
-      });
-      
-      const catArray = Object.entries(catMap)
-        .map(([category, amount]) => ({ category, amount }))
-        .sort((a, b) => b.amount - a.amount);
-        
-      return catArray.slice(0, 5);
-    });
-
-    // Active scopes summary
-    const scopesSummary = computed(() => {
-      const personal = activeScopes.value.filter(s => s.type === 'personal').length;
-      const household = activeScopes.value.filter(s => s.type === 'household').length;
-      return `${personal} Personal, ${household} Household`;
-    });
-    
-    // Get the top spending category
-    const topCategory = computed(() => {
-      if (topSpentCategories.value.length > 0) {
-        return topSpentCategories.value[0].category;
-      }
-      return 'None';
-    });
-    
-    // Get tracking since date - earliest expense date
-    const getTrackingSince = computed(() => {
-      if (expenses.value.length === 0) return 'N/A';
-      
-      try {
-        // Find earliest expense date
-        const dates = expenses.value
-          .map(e => adjustForTimezone(e.ExpenseDate))
-          .filter(d => d instanceof Date && !isNaN(d));
-          
-        if (dates.length === 0) return 'N/A';
-        
-        const earliestDate = new Date(Math.min(...dates.map(d => d.getTime())));
-        return formatDate(earliestDate);
-      } catch (e) {
-        console.error('Error calculating tracking since date:', e);
-        return 'N/A';
-      }
-    });
 
     // Callback from Plaid child
     const onAccountsFetched = (totalBalance) => {
@@ -546,110 +454,6 @@ export default {
       }
     };
 
-    // Category Chart Options
-          const categoryChartOptions = computed(() => {
-      const isDark = theme.global.current.value.dark;
-      const textColor = isDark ? '#FFFFFF' : '#000000';
-      
-      return {
-        chart: {
-          fontFamily: 'inherit',
-          foreColor: textColor,
-          toolbar: { show: false },
-        },
-        labels: topSpentCategories.value.map(c => {
-          // Truncate long category names only in chart labels, but keep tooltip with full name
-          return c.category.length > 15 ? c.category.slice(0, 12) + '...' : c.category;
-        }),
-        dataLabels: {
-          enabled: false
-        },
-        plotOptions: {
-          pie: {
-            donut: {
-              size: '70%',
-              labels: {
-                show: true,
-                name: { show: false },
-                value: { 
-                  show: true,
-                  formatter: val => formatCurrency(val)
-                },
-                total: { 
-                  show: true,
-                  formatter: w => formatCurrency(
-                    w.globals.seriesTotals.reduce((a, b) => a + b, 0)
-                  )
-                }
-              }
-            }
-          }
-        },
-        legend: {
-          show: false
-        },
-        tooltip: {
-          theme: isDark ? 'dark' : 'light',
-          y: {
-            formatter: val => formatCurrency(val)
-          },
-          custom: function({ series, seriesIndex, dataPointIndex, w }) {
-            // Show full category name in tooltip
-            const category = topSpentCategories.value[seriesIndex].category;
-            const value = formatCurrency(series[seriesIndex]);
-            return `<div class="apexcharts-tooltip-title" style="font-family: inherit; font-size: 12px;">
-                      ${category}
-                    </div>
-                    <div class="apexcharts-tooltip-series-group">
-                      <span class="apexcharts-tooltip-text" style="font-family: inherit; font-size: 12px;">
-                        ${value}
-                      </span>
-                    </div>`;
-          }
-        },
-        colors: getCategoryColors(topSpentCategories.value.length)
-      };
-    });
-
-    const categoryChartSeries = computed(() => {
-      return topSpentCategories.value.map(cat => cat.amount);
-    });
-
-    // Get color for category based on index
-    const getCategoryColor = (index) => {
-      const colors = [
-        '#1976d2', '#4caf50', '#ff9800', '#9c27b0', '#f44336',
-        '#2196f3', '#8bc34a', '#ffc107', '#673ab7', '#e91e63'
-      ];
-      return colors[index % colors.length];
-    };
-
-    // Calculate category bar width with true proportional scaling
-    const getCategoryBarWidth = (amount, index) => {
-      if (topSpentCategories.value.length === 0) return 5;
-      
-      const maxAmount = topSpentCategories.value[0].amount;
-      
-      // If all amounts are the same, use equal widths
-      if (maxAmount === 0) {
-        return 70;
-      }
-      
-      // True proportional scaling: each bar is exactly proportional to its value
-      // Scale the largest value to 75% to leave room for text, all others are proportional
-      const maxWidth = 75;
-      const proportionalWidth = (amount / maxAmount) * maxWidth;
-      
-      // Only apply a very small minimum (2%) for tiny values to remain visible
-      const minWidth = 2;
-      
-      return Math.max(minWidth, Math.round(proportionalWidth));
-    };
-
-    // Get an array of colors for categories
-    const getCategoryColors = (count) => {
-      return Array.from({ length: count }, (_, i) => getCategoryColor(i));
-    };
 
     // Monthly spending timeline data
     const getDailySpending = (year, month) => {
@@ -825,20 +629,16 @@ export default {
       chartLoading,
       timelineView,
       bankAccounts,
-      trackingSince,
+      spendingComparison,
+      loadingComparison,
+      averageExpensesRef,
 
       // Computed
       filteredExpenses,
       monthlyTotal,
       topFiveTransactions,
-      topSpentCategories,
-      scopesSummary,
       spendingSeries,
       spendingChartOptions,
-      categoryChartOptions,
-      categoryChartSeries,
-      topCategory,
-      getTrackingSince,
 
       // Methods
       formatCurrency,
@@ -847,9 +647,8 @@ export default {
       amountClass,
       onAccountsFetched,
       adjustForTimezone,
-      getCategoryColor,
-      getCategoryBarWidth,
       parseNumericValue,
+      refreshExpenseData,
     };
   },
 };
@@ -974,20 +773,6 @@ export default {
   white-space: nowrap;
 }
 
-/* Insights container */
-.insights-container {
-  display: flex;
-  flex-direction: column;
-}
-
-.donut-container {
-  height: 200px;
-}
-
-.insights-summary {
-  padding: 8px;
-}
-
 /* Scope filters */
 .scope-filters {
   display: flex;
@@ -995,52 +780,21 @@ export default {
   gap: 8px;
 }
 
-/* Categories styling */
-.categories-list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+/* Spending comparison styling */
+.comparison-container {
+  text-align: center;
+  max-width: 280px;
 }
 
-.category-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  width: 100%;
-}
-
-.category-name-container {
-  flex: 1;
-  min-width: 0;
-  margin-right: 12px;
-}
-
-.category-name-wrapper {
-  font-size: 0.875rem;
-  min-width: 0;
-  white-space: nowrap;
-  line-height: 1.3;
-  flex: 1;
-}
-
-.category-bar {
-  height: 16px;
-  min-width: 10px;
-  border-radius: 4px;
-  transition: width 0.3s ease;
-}
-
-.category-amount {
-  font-size: 0.875rem;
+.comparison-text {
+  font-size: 0.8rem;
   font-weight: 500;
-  text-align: right;
-  white-space: nowrap;
+  line-height: 1.2;
 }
 
-/* Chart styling */
-.chart-container {
-  height: 200px;
-  position: relative;
+.comparison-details {
+  font-size: 0.7rem;
+  opacity: 0.8;
 }
 
 .chart-wrapper {

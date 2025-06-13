@@ -173,3 +173,18 @@ plaid_items_table = Table(
     extend_existing=False,
     implicit_returning=False,
 )
+
+category_targets_table = Table(
+    "category_targets",
+    metadata,
+    Column("TargetID", Integer, primary_key=True),
+    Column("ScopeID", Integer, nullable=False),
+    Column("AccountID", Integer, nullable=False),
+    Column("CategoryName", String(255), nullable=False),
+    Column("MonthlyTarget", Float, nullable=False),
+    Column("IsActive", Boolean, default=True),
+    Column("CreateDate", Date),
+    Column("LastUpdated", Date),
+    extend_existing=False,
+    implicit_returning=False,
+)

@@ -878,6 +878,9 @@ export default {
         if (data.success) {
           expenses.value = expenses.value.filter(exp => exp.ExpenseID !== expenseId);
           updateMonthGroups();
+          
+          // Dispatch global event for other components to refresh
+          window.dispatchEvent(new CustomEvent('expenseUpdated'));
         }
       } catch (error) {
         console.error("Error:", error);
@@ -904,6 +907,9 @@ export default {
           await fetchExpenses();
           selectedExpenses.value = [];
           alert(`Successfully deleted ${selectedIds.length} expenses`);
+          
+          // Dispatch global event for other components to refresh
+          window.dispatchEvent(new CustomEvent('expenseUpdated'));
         }
       } catch (error) {
         console.error("Error:", error);
@@ -987,6 +993,9 @@ export default {
       fetchExpenses();
       isEditDialogOpen.value = false;
       isAddDialogOpen.value = false;
+      
+      // Dispatch global event for other components to refresh
+      window.dispatchEvent(new CustomEvent('expenseUpdated'));
     };
 
     // Add expense dialog
